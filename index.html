@@ -11,9 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- مكتبة Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --paper:#171A21;
@@ -267,8 +266,7 @@
   }
 </style>
 </head>
-<script type="module" src="auth.js"></script>
-  <body>
+<body>
 
 <div id="authOverlay">
   <div class="authcard">
@@ -297,7 +295,6 @@
 </div>
 
 <div class="app">
-
   <aside class="sidebar">
     <div class="avatarblock">
       <div class="photowrap" id="photowrap" onclick="if(editMode) document.getElementById('photoInput').click()">
@@ -350,13 +347,11 @@
     </div>
 
     <div class="page">
-
       <section class="section" data-section="about">
         <h2 class="sectitle" data-i18n="about_title">عن نفسي</h2>
         <p class="secdesc" data-i18n="about_desc">اكتبي هنا نبذة عنك تعرّفي بيها الزوّار عليكِ.</p>
         <p class="storytext" data-field="about.bio" contenteditable="false"></p>
       </section>
-
       <section class="section" data-section="story">
         <h2 class="sectitle" data-i18n="story_title">قصتي وخبرتي</h2>
         <p class="secdesc" data-i18n="story_desc">احكي هنا رحلتك: من فين بدأتِ، الصعوبات اللي واجهتيها، وإزاي وصلتِ للنجاحات.</p>
@@ -365,49 +360,42 @@
         <div class="timeline" id="timelineList"></div>
         <button class="addbtn" onclick="addItem('timeline')">+ إضافة محطة</button>
       </section>
-
       <section class="section" data-section="services">
         <h2 class="sectitle" data-i18n="services_title">الخدمات</h2>
         <p class="secdesc" data-i18n="services_desc">الخدمات اللي بتقدّميها.</p>
         <div class="grid" id="servicesList"></div>
         <button class="addbtn" onclick="addItem('services')">+ إضافة خدمة</button>
       </section>
-
       <section class="section" data-section="certificates">
         <h2 class="sectitle" data-i18n="certificates_title">الشهادات</h2>
         <p class="secdesc" data-i18n="certificates_desc">شهادات الكورسات والدورات اللي أخدتيها.</p>
         <div class="grid" id="certificatesList"></div>
         <button class="addbtn" onclick="addItem('certificates')">+ إضافة شهادة</button>
       </section>
-
       <section class="section" data-section="courses">
         <h2 class="sectitle" data-i18n="courses_title">الدورات</h2>
         <p class="secdesc" data-i18n="courses_desc">الدورات اللي سجّلتِ فيها وخلّصتيها.</p>
         <div class="grid" id="coursesList"></div>
         <button class="addbtn" onclick="addItem('courses')">+ إضافة دورة</button>
       </section>
-
       <section class="section" data-section="portfolio">
         <h2 class="sectitle" data-i18n="portfolio_title">الأعمال والتصاميم</h2>
         <p class="secdesc" data-i18n="portfolio_desc">مشاريعك، تصاميمك، والمواقع اللي عملتيها.</p>
         <div class="grid" id="portfolioList"></div>
         <button class="addbtn" onclick="addItem('portfolio')">+ إضافة عمل</button>
       </section>
-
       <section class="section" data-section="articles">
         <h2 class="sectitle" data-i18n="articles_title">المقالات</h2>
         <p class="secdesc" data-i18n="articles_desc">المقالات اللي كتبتيها.</p>
         <div class="grid" id="articlesList"></div>
         <button class="addbtn" onclick="addItem('articles')">+ إضافة مقال</button>
       </section>
-
       <section class="section" data-section="books">
         <h2 class="sectitle" data-i18n="books_title">الكتب اللي قرأتها</h2>
         <p class="secdesc" data-i18n="books_desc">قائمة بالكتب اللي قرأتيها وتقييمك ليها.</p>
         <div class="grid" id="booksList"></div>
         <button class="addbtn" onclick="addItem('books')">+ إضافة كتاب</button>
       </section>
-
       <section class="section" data-section="skills">
         <h2 class="sectitle" data-i18n="skills_title">المهارات والهوايات</h2>
         <p class="secdesc" data-i18n="skills_desc">المهارات اللي اكتسبتيها ودرجة إتقانك ليها.</p>
@@ -417,26 +405,15 @@
         <div class="hobbies" id="hobbiesList"></div>
         <button class="addbtn" onclick="addItem('hobbies')">+ إضافة هواية</button>
       </section>
-
     </div>
   </main>
 </div>
 
+<!-- الملفات الخارجية -->
+<script src="supabase.js"></script>
+<script src="auth.js"></script>
 <script>
-/* ====== FIREBASE CONFIG ====== */
-const firebaseConfig = {
-  apiKey: "AIzaSyCxRjCdgGmSvonx-_DwADSeF3C5jvw0zOk",
-  authDomain: "foliome-dd90f.firebaseapp.com",
-  projectId: "foliome-dd90f",
-  storageBucket: "foliome-dd90f.firebasestorage.app",
-  messagingSenderId: "871502021506",
-  appId: "1:871502021506:web:a6278a88671d07b7fe059b"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-const PORTFOLIO_DOC_ID = 'main';
-/* ============================== */
+/* ====== المتغيرات العامة ====== */
 const TAB_COLORS=['pine','amber','plum','rust','pine','amber','plum','rust','amber'];
 const TABS=[
   {id:'about',label:'الرئيسية', icon:'🏠'},
@@ -450,7 +427,6 @@ const TABS=[
   {id:'skills',label:'المهارات والهوايات', icon:'⚡'}
 ];
 
-/* ====== ترجمة الواجهة (عربي/إنجليزي) - النصوص الثابتة بس، مش محتوى المالكة ====== */
 let currentLang='ar';
 const I18N={
   ar:{
@@ -484,6 +460,7 @@ const I18N={
     status_available:'Available for work', status_busy:'Currently busy'
   }
 };
+
 function toggleLang(){
   currentLang = currentLang==='ar' ? 'en' : 'ar';
   applyLanguage();
@@ -570,184 +547,114 @@ function seedData(){
   };
 }
 
-let currentUser = null;
-let isSignupMode = false;
-
-function openAuthPanel(){
-  document.getElementById('authOverlay').classList.add('open');
-}
-function closeAuthPanel(){
-  document.getElementById('authOverlay').classList.remove('open');
-  document.getElementById('authError').style.display='none';
-}
-
-function toggleAuthMode(){
-  isSignupMode = !isSignupMode;
-  document.getElementById('authSubmitBtn').textContent = isSignupMode ? 'إنشاء الحساب' : 'تسجيل الدخول';
-  document.getElementById('authSubtitle').textContent = isSignupMode
-    ? 'اعملي حساب المالكة عشان تقدري تعدّلي على الموقع'
-    : 'سجّلي دخولك عشان تقدري تعدّلي على الموقع';
-  document.getElementById('authSwitchText').innerHTML = isSignupMode
-    ? 'عندك حساب بالفعل؟ <a onclick="toggleAuthMode()">سجّلي دخولك</a>'
-    : 'لسه معملتيش حساب؟ <a onclick="toggleAuthMode()">اعملي حساب جديد</a>';
-  document.getElementById('authError').style.display='none';
-}
-
-function handleAuthSubmit(){
-  const email=document.getElementById('authEmail').value.trim();
-  const password=document.getElementById('authPassword').value;
-  const errEl=document.getElementById('authError');
-  errEl.style.display='none';
-  if(!email || !password){ errEl.textContent='من فضلك اكتبي البريد وكلمة السر'; errEl.style.display='block'; return; }
-  document.getElementById('authForm').style.display='none';
-  document.getElementById('authLoading').style.display='block';
-  const done = isSignupMode
-    ? auth.createUserWithEmailAndPassword(email, password)
-    : auth.signInWithEmailAndPassword(email, password);
-  done.catch(err=>{
-    document.getElementById('authForm').style.display='block';
-    document.getElementById('authLoading').style.display='none';
-    errEl.textContent = arabicAuthError(err.code);
-    errEl.style.display='block';
-  });
-}
-function arabicAuthError(code){
-  const map={
-    'auth/email-already-in-use':'البريد ده مسجّل قبل كده، جربي تسجيل الدخول',
-    'auth/invalid-email':'صيغة البريد الإلكتروني مش صحيحة',
-    'auth/weak-password':'كلمة السر لازم تكون 6 أحرف على الأقل',
-    'auth/user-not-found':'مفيش حساب بالبريد ده',
-    'auth/wrong-password':'كلمة السر غلط',
-    'auth/invalid-credential':'البريد أو كلمة السر غلط'
-  };
-  return map[code] || 'حصل خطأ، جربي تاني';
-}
-function handleLogout(){
-  if(editMode) toggleEdit();
-  auth.signOut();
-}
-function handleForgotPassword(){
-  const email=document.getElementById('authEmail').value.trim();
-  const errEl=document.getElementById('authError');
-  errEl.style.display='none';
-  if(!email){ errEl.textContent='اكتبي بريدك الإلكتروني الأول فوق، وبعدين دوسي "نسيت كلمة السر"'; errEl.style.display='block'; return; }
-  auth.sendPasswordResetEmail(email).then(()=>{
-    errEl.style.color='var(--pine)';
-    errEl.textContent='بعتنالك إيميل فيه رابط لتغيير كلمة السر، افتحي بريدك';
-    errEl.style.display='block';
-  }).catch(err=>{
-    errEl.style.color='var(--rust)';
-    errEl.textContent=arabicAuthError(err.code);
-    errEl.style.display='block';
-  });
-}
-function handleGoogleSignIn(){
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(err=>{
-    const errEl=document.getElementById('authError');
-    errEl.style.color='var(--rust)';
-    errEl.textContent = err.code==='auth/popup-closed-by-user' ? '' : arabicAuthError(err.code);
-    errEl.style.display = errEl.textContent ? 'block' : 'none';
-  });
-}
-
-auth.onAuthStateChanged(user=>{
-  currentUser = user || null;
-  const loggedOut = document.getElementById('loggedOutControls');
-  const loggedIn = document.getElementById('loggedInControls');
-  const owner = document.getElementById('ownerControls');
-  if(currentUser){
-    closeAuthPanel();
-    document.getElementById('authForm').style.display='block';
-    document.getElementById('authLoading').style.display='none';
-    loggedOut.style.display='none';
-    loggedIn.style.display='flex';
-    owner.style.display='flex';
-    document.getElementById('userEmailBadge').textContent = currentUser.email || '';
-    ensureOwnerDoc();
-  }else{
-    if(editMode) toggleEdit();
-    loggedOut.style.display='inline-block';
-    loggedIn.style.display='none';
-    owner.style.display='none';
-  }
-});
-
+// ======================== المتغيرات العامة ========================
 let state = null;
 let appInitialized = false;
+let editMode = false;
 
+// ======================== عمليات Supabase ========================
 async function loadPublicData(){
-  const badge=document.getElementById('saveBadge');
-  try{
-    const docRef = db.collection('portfolios').doc(PORTFOLIO_DOC_ID);
-    const snap = await docRef.get();
-    state = snap.exists ? snap.data() : seedData();
-    bumpVisitCounter(docRef, snap.exists ? (snap.data().visits||0) : 0);
-  }catch(e){
+  const badge = document.getElementById('saveBadge');
+  try {
+    const { data, error } = await supabase
+      .from('portfolios')
+      .select('*')
+      .eq('id', PORTFOLIO_DOC_ID)
+      .maybeSingle();
+
+    if (data) {
+      state = data.data || seedData();
+      state.ownerUid = data.owner_uid;
+      bumpVisitCounter(data.visits || 0);
+    } else {
+      state = seedData();
+      if (badge) badge.textContent = 'لا توجد بيانات محفوظة بعد';
+    }
+  } catch(e) {
     state = seedData();
-    if(badge) badge.textContent='تعذّر الاتصال بالإنترنت';
+    if (badge) badge.textContent = 'تعذّر الاتصال بالإنترنت';
   }
+
   renderTabs();
   document.querySelector('.section[data-section="about"]').classList.add('active');
   appInitialized = true;
   renderAll();
 }
 
-function bumpVisitCounter(docRef, currentCount){
-  const el=document.getElementById('visitCounter');
-  const num=document.getElementById('visitCounterNum');
-  if(!el) return;
+function bumpVisitCounter(currentCount){
+  const el = document.getElementById('visitCounter');
+  const num = document.getElementById('visitCounterNum');
+  if (!el) return;
   num.textContent = currentCount + 1;
-  el.style.display='inline-flex';
-  docRef.set({visits: firebase.firestore.FieldValue.increment(1)}, {merge:true}).catch(()=>{});
+  el.style.display = 'inline-flex';
+  supabase.rpc('increment_visits', { row_id: PORTFOLIO_DOC_ID }).catch(() => {});
 }
 
 async function ensureOwnerDoc(){
-  try{
-    const docRef = db.collection('portfolios').doc(PORTFOLIO_DOC_ID);
-    const snap = await docRef.get();
-    if(!snap.exists){
-      state.ownerUid = currentUser.uid;
-      await docRef.set(state);
-    }else if(!snap.data().ownerUid){
-      state.ownerUid = currentUser.uid;
-      await docRef.set(state);
-    }else{
-      state.ownerUid = snap.data().ownerUid;
+  if (!currentUser) return;
+  try {
+    const { data } = await supabase
+      .from('portfolios')
+      .select('owner_uid')
+      .eq('id', PORTFOLIO_DOC_ID)
+      .maybeSingle();
+
+    if (!data || !data.owner_uid) {
+      if (!state) state = seedData();
+      state.ownerUid = currentUser.id;
+      await supabase.from('portfolios').upsert({
+        id: PORTFOLIO_DOC_ID,
+        data: state,
+        owner_uid: currentUser.id,
+        visits: 0
+      });
+    } else {
+      state.ownerUid = data.owner_uid;
     }
-  }catch(e){}
+  } catch(e) {
+    console.error('ensureOwnerDoc error:', e);
+  }
 }
 
-let saveTimer=null;
+let saveTimer = null;
 function saveState(){
-  const badge=document.getElementById('saveBadge');
+  const badge = document.getElementById('saveBadge');
+  if (!badge) return;
   clearTimeout(saveTimer);
-  badge.textContent='بيتم الحفظ...';
-  saveTimer=setTimeout(async ()=>{
-    if(!currentUser) return;
-    try{
-      await db.collection('portfolios').doc(PORTFOLIO_DOC_ID).set(state);
-      badge.textContent='✓ اتحفظت أونلاين';
-    }catch(e){
-      badge.textContent='⚠️ فشل الحفظ - تأكدي إنك متصلة بالنت';
+  badge.textContent = 'بيتم الحفظ...';
+  saveTimer = setTimeout(async () => {
+    if (!currentUser) return;
+    try {
+      const { error } = await supabase
+        .from('portfolios')
+        .upsert({
+          id: PORTFOLIO_DOC_ID,
+          data: state,
+          owner_uid: currentUser.id,
+          updated_at: new Date().toISOString()
+        });
+      badge.textContent = error ? '⚠️ فشل الحفظ - تأكدي من الاتصال' : '✓ اتحفظت أونلاين';
+    } catch(e) {
+      badge.textContent = '⚠️ فشل الحفظ - تأكدي إنك متصلة بالنت';
     }
-  },500);
+  }, 500);
 }
 
+// ======================== دوال مساعدة ========================
 function getPath(obj, path){ return path.split('.').reduce((o,k)=>o&&o[k], obj); }
 function setPath(obj, path, val){
-  const parts=path.split('.');
-  let cur=obj;
-  for(let i=0;i<parts.length-1;i++) cur=cur[parts[i]];
-  cur[parts[parts.length-1]]=val;
+  const parts = path.split('.');
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) cur = cur[parts[i]];
+  cur[parts[parts.length - 1]] = val;
 }
 
 function bindFields(){
-  document.querySelectorAll('[data-field]').forEach(el=>{
-    const path=el.getAttribute('data-field');
-    const val=getPath(state, path);
-    el.textContent = (val!==undefined && val!==null) ? val : '';
-    el.oninput = ()=>{
+  document.querySelectorAll('[data-field]').forEach(el => {
+    const path = el.getAttribute('data-field');
+    const val = getPath(state, path);
+    el.textContent = (val !== undefined && val !== null) ? val : '';
+    el.oninput = () => {
       setPath(state, path, el.textContent);
       saveState();
     };
@@ -755,33 +662,32 @@ function bindFields(){
 }
 
 function renderTabs(){
-  const bar=document.getElementById('tabbar');
-  bar.innerHTML='';
-  TABS.forEach((t,i)=>{
-    const b=document.createElement('button');
-    b.className='tabbtn'+(i===0?' active':'');
-    b.innerHTML=`<span>${t.icon}</span><span>${t.label}</span>`;
+  const bar = document.getElementById('tabbar');
+  bar.innerHTML = '';
+  TABS.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.className = 'tabbtn' + (i === 0 ? ' active' : '');
+    b.innerHTML = `<span>${t.icon}</span><span>${t.label}</span>`;
     b.style.setProperty('--tabcolor', `var(--${TAB_COLORS[i]})`);
-    b.onclick=()=>switchTab(t.id, b);
+    b.onclick = () => switchTab(t.id, b);
     bar.appendChild(b);
   });
 }
 function switchTab(id, btn){
-  document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tabbtn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   btn.classList.add('active');
   document.querySelector(`.section[data-section="${id}"]`).classList.add('active');
 }
 
-let editMode=false;
 function toggleEdit(){
-  if(!currentUser) return;
-  editMode=!editMode;
+  if (!currentUser) return;
+  editMode = !editMode;
   document.body.classList.toggle('edit-mode', editMode);
   document.getElementById('editToggle').classList.toggle('on', editMode);
-  document.getElementById('editToggle').textContent = editMode? '✅ إنهاء التعديل' : '✏️ تفعيل التعديل';
-  document.querySelectorAll('[data-field]').forEach(el=>{
-    el.setAttribute('contenteditable', editMode? 'true':'false');
+  document.getElementById('editToggle').textContent = editMode ? '✅ إنهاء التعديل' : '✏️ تفعيل التعديل';
+  document.querySelectorAll('[data-field]').forEach(el => {
+    el.setAttribute('contenteditable', editMode ? 'true' : 'false');
   });
   renderSkills();
   renderHobbies();
@@ -789,42 +695,48 @@ function toggleEdit(){
 }
 
 function readImage(file, cb){
-  const reader=new FileReader();
-  reader.onload=()=>cb(reader.result);
+  const reader = new FileReader();
+  reader.onload = () => cb(reader.result);
   reader.readAsDataURL(file);
 }
 function handlePhoto(ev){
-  const file=ev.target.files[0];
-  if(!file || !currentUser) return;
-  readImage(file, dataUrl=>{
-    state.about.photo=dataUrl;
+  const file = ev.target.files[0];
+  if (!file || !currentUser) return;
+  readImage(file, dataUrl => {
+    state.about.photo = dataUrl;
     renderPhoto();
     saveState();
   });
 }
 function renderPhoto(){
-  const img=document.getElementById('photoImg');
-  const emoji=document.getElementById('photoEmoji');
-  if(state.about.photo){ img.src=state.about.photo; img.style.display='block'; emoji.style.display='none'; }
-  else{ img.style.display='none'; emoji.style.display='block'; }
+  const img = document.getElementById('photoImg');
+  const emoji = document.getElementById('photoEmoji');
+  if (state.about.photo) {
+    img.src = state.about.photo;
+    img.style.display = 'block';
+    emoji.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    emoji.style.display = 'block';
+  }
 }
 
 function renderStatusBadge(){
-  const badge=document.getElementById('statusBadge');
-  const text=document.getElementById('statusText');
+  const badge = document.getElementById('statusBadge');
+  const text = document.getElementById('statusText');
   const s = state.about.status || 'available';
-  badge.classList.toggle('busy', s==='busy');
-  text.textContent = I18N[currentLang][s==='busy' ? 'status_busy' : 'status_available'];
+  badge.classList.toggle('busy', s === 'busy');
+  text.textContent = I18N[currentLang][s === 'busy' ? 'status_busy' : 'status_available'];
 }
 function cycleStatus(){
-  if(!editMode) return;
-  state.about.status = (state.about.status==='busy') ? 'available' : 'busy';
+  if (!editMode) return;
+  state.about.status = (state.about.status === 'busy') ? 'available' : 'busy';
   renderStatusBadge();
   saveState();
 }
 function openContact(){
-  const email = (state.about.email||'').trim();
-  if(!email || email==='بريدك الإلكتروني'){
+  const email = (state.about.email || '').trim();
+  if (!email || email === 'بريدك الإلكتروني') {
     alert('لسه المالكة معلّمتش بريدها الإلكتروني في قسم "الرئيسية"');
     return;
   }
@@ -832,8 +744,9 @@ function openContact(){
   window.location.href = `mailto:${email}?subject=${subject}`;
 }
 
+// ======================== دوال العرض ========================
 function esc(s){
-  return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return (s || '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 function fieldSpan(tag, cls, arr, idx, field, extra){
   const v = state[arr][idx][field];
@@ -841,7 +754,7 @@ function fieldSpan(tag, cls, arr, idx, field, extra){
 }
 
 function renderServices(){
-  const wrap=document.getElementById('servicesList');
+  const wrap = document.getElementById('servicesList');
   wrap.innerHTML = state.services.map((it,idx)=>`
     <div class="card">
       <button class="delbtn" onclick="removeItem('services',${idx})">×</button>
@@ -854,7 +767,7 @@ function renderServices(){
 }
 
 function renderCertificates(){
-  const wrap=document.getElementById('certificatesList');
+  const wrap = document.getElementById('certificatesList');
   wrap.innerHTML = state.certificates.map((it,idx)=>`
     <div class="card">
       <button class="delbtn" onclick="removeItem('certificates',${idx})">×</button>
@@ -869,7 +782,7 @@ function renderCertificates(){
 }
 
 function renderCourses(){
-  const wrap=document.getElementById('coursesList');
+  const wrap = document.getElementById('coursesList');
   wrap.innerHTML = state.courses.map((it,idx)=>`
     <div class="card">
       <button class="delbtn" onclick="removeItem('courses',${idx})">×</button>
@@ -882,7 +795,7 @@ function renderCourses(){
 }
 
 function renderPortfolio(){
-  const wrap=document.getElementById('portfolioList');
+  const wrap = document.getElementById('portfolioList');
   wrap.innerHTML = state.portfolio.map((it,idx)=>`
     <div class="card">
       <button class="delbtn" onclick="removeItem('portfolio',${idx})">×</button>
@@ -897,7 +810,7 @@ function renderPortfolio(){
 }
 
 function renderArticles(){
-  const wrap=document.getElementById('articlesList');
+  const wrap = document.getElementById('articlesList');
   wrap.innerHTML = state.articles.map((it,idx)=>`
     <div class="card">
       <button class="delbtn" onclick="removeItem('articles',${idx})">×</button>
@@ -910,7 +823,7 @@ function renderArticles(){
 }
 
 function renderBooks(){
-  const wrap=document.getElementById('booksList');
+  const wrap = document.getElementById('booksList');
   wrap.innerHTML = state.books.map((it,idx)=>`
     <div class="card">
       <button class="delbtn" onclick="removeItem('books',${idx})">×</button>
@@ -930,7 +843,7 @@ function setRating(idx,n){
 }
 
 function renderSkills(){
-  const wrap=document.getElementById('skillsList');
+  const wrap = document.getElementById('skillsList');
   wrap.innerHTML = state.skills.map((it,idx)=>`
     <div class="skillrow">
       ${fieldSpan('span','skillname','skills',idx,'name')}
@@ -949,7 +862,7 @@ function setLevel(idx,n){
 }
 
 function renderHobbies(){
-  const wrap=document.getElementById('hobbiesList');
+  const wrap = document.getElementById('hobbiesList');
   wrap.innerHTML = state.hobbies.map((it,idx)=>`
     <div class="hobby">
       ${fieldSpan('span','','hobbies',idx,'emoji')}
@@ -960,14 +873,14 @@ function renderHobbies(){
 }
 
 function renderSocial(){
-  const wrap=document.getElementById('socialList');
+  const wrap = document.getElementById('socialList');
   if(!wrap) return;
   wrap.innerHTML = state.social.map((it,idx)=>{
     const nameHtml = editMode
       ? fieldSpan('span','','social',idx,'platform')
       : (it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.platform)}</a>` : `<span>${esc(it.platform)}</span>`);
     const urlHtml = editMode
-      ? `${fieldSpan('span','',  'social',idx,'url','style="font-size:10.5px;color:var(--ink-faint);max-width:120px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"')}`
+      ? `${fieldSpan('span','','social',idx,'url','style="font-size:10.5px;color:var(--ink-faint);max-width:120px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"')}`
       : '';
     return `
     <div class="social-chip">
@@ -981,7 +894,7 @@ function renderSocial(){
 }
 
 function renderTimeline(){
-  const wrap=document.getElementById('timelineList');
+  const wrap = document.getElementById('timelineList');
   wrap.innerHTML = state.timeline.map((it,idx)=>`
     <div class="tlitem">
       <button class="delbtn" onclick="removeItem('timeline',${idx})">×</button>
@@ -1004,6 +917,7 @@ function bindArrFields(root){
   });
 }
 
+// ======================== إضافة / حذف ========================
 const defaultsFor={
   certificates:{title:'اسم الشهادة', org:'الجهة المانحة', date:'التاريخ', desc:'اكتبي وصف مختصر عن الشهادة', image:null},
   courses:{title:'اسم الدورة', platform:'المنصة', date:'التاريخ', status:'مكتملة'},
@@ -1018,8 +932,8 @@ const defaultsFor={
 };
 const renderMap={
   certificates:renderCertificates, courses:renderCourses, portfolio:renderPortfolio,
-  articles:renderArticles, books:renderBooks, skills:renderSkills, hobbies:renderHobbies, timeline:renderTimeline,
-  social:renderSocial, services:renderServices
+  articles:renderArticles, books:renderBooks, skills:renderSkills, hobbies:renderHobbies,
+  timeline:renderTimeline, social:renderSocial, services:renderServices
 };
 function addItem(key){
   state[key].push(JSON.parse(JSON.stringify(defaultsFor[key])));
@@ -1047,6 +961,7 @@ function pickImage(arr, idx){
   input.click();
 }
 
+// ======================== النسخ الاحتياطي ========================
 function downloadBackup(){
   const blob=new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
   const url=URL.createObjectURL(blob);
@@ -1090,7 +1005,6 @@ function renderAll(){
 }
 
 loadPublicData();
-
 </script>
 </body>
 </html>
