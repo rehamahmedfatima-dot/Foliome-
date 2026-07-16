@@ -1,224 +1,282 @@
 // ===============================
 // auth.js
+// Supabase Authentication
 // ===============================
 
 let currentUser = null;
 let authMode = "login"; // login | signup
 
-// -------------------------------
-// فتح وغلق نافذة تسجيل الدخول
-// -------------------------------
+// ===============================
+// عناصر الواجهة
+// ===============================
+const authOverlay = document.getElementById("authOverlay");
+const authError = document.getElementById("authError");
+const authEmail = document.getElementById("authEmail");
+const authPassword = document.getElementById("authPassword");
+
+const authSubtitle = document.getElementById("authSubtitle");
+const authSubmitBtn = document.getElementById("authSubmitBtn");
+const authSwitchText = document.getElementById("authSwitchText");
+
+const loggedOutControls = document.getElementById("loggedOutControls");
+const loggedInControls = document.getElementById("loggedInControls");
+const ownerControls = document.getElementById("ownerControls");
+const userEmailBadge = document.getElementById("userEmailBadge");
+
+// ===============================
+// واجهة المستخدم
+// ===============================
+
 function openAuthPanel() {
-  document.getElementById("authOverlay").classList.add("open");
-  document.getElementById("authError").style.display = "none";
+    authOverlay.classList.add("open");
+    authError.style.display = "none";
 }
 
 function closeAuthPanel() {
-  document.getElementById("authOverlay").classList.remove("open");
+    authOverlay.classList.remove("open");
 }
 
-// -------------------------------
-// تغيير بين تسجيل الدخول وإنشاء حساب
-// -------------------------------
+function showError(message) {
+    authError.textContent = message;
+    authError.style.display = "block";
+}
+
+function hideError() {
+    authError.style.display = "none";
+}
+
+function updateUILoggedIn(user) {
+    loggedOutControls.style.display = "none";
+    loggedInControls.style.display = "inline-flex";
+    ownerControls.style.display = "inline-flex";
+    userEmailBadge.textContent = user.email;
+}
+
+function updateUILoggedOut() {
+    loggedOutControls.style.display = "inline-flex";
+    loggedInControls.style.display = "none";
+    ownerControls.style.display = "none";
+
+    if (typeof editMode !== "undefined" && editMode) {
+        toggleEdit();
+    }
+}
+
+// ===============================
+// تبديل بين تسجيل الدخول وإنشاء حساب
+// ===============================
+
 function toggleAuthMode() {
 
-  authMode = authMode === "login" ? "signup" : "login";
+    authMode = authMode === "login"
+        ? "signup"
+        : "login";
 
-  const title = document.getElementById("authSubtitle");
-  const btn = document.getElementById("authSubmitBtn");
-  const sw = document.getElementById("authSwitchText");
+    if (authMode === "login") {
 
-  if (authMode === "login") {
+        authSubtitle.textContent =
+            "سجّلي دخولك عشان تقدري تعدّلي على الموقع";
 
-    title.textContent = "سجّلي دخولك عشان تقدري تعدّلي على الموقع";
+        authSubmitBtn.textContent =
+            "تسجيل الدخول";
 
-    btn.textContent = "تسجيل الدخول";
-
-    sw.innerHTML =
-      'لسه معملتيش حساب؟ <a onclick="toggleAuthMode()">اعملي حساب جديد</a>';
-
-  } else {
-
-    title.textContent = "اعملي حساب جديد";
-
-    btn.textContent = "إنشاء حساب";
-
-    sw.innerHTML =
-      'عندك حساب بالفعل؟ <a onclick="toggleAuthMode()">تسجيل الدخول</a>';
-
-  }
-
-}
-
-// -------------------------------
-// تسجيل دخول أو إنشاء حساب
-// -------------------------------
-async function handleAuthSubmit() {
-
-  const email = document.getElementById("authEmail").value.trim();
-  const password = document.getElementById("authPassword").value.trim();
-
-  const err = document.getElementById("authError");
-
-  err.style.display = "none";
-
-  if (!email || !password) {
-
-    err.textContent = "اكتبي البريد وكلمة السر";
-
-    err.style.display = "block";
-
-    return;
-
-  }
-
-  try {
-
-    let result;
-
-    if (authMode === "signup") {
-
-      result = await supabase.auth.signUp({
-
-        email,
-
-        password
-
-      });
+        authSwitchText.innerHTML =
+            'لسه معملتيش حساب؟ <a onclick="toggleAuthMode()">اعملي حساب جديد</a>';
 
     } else {
 
-      result = await supabase.auth.signInWithPassword({
+        authSubtitle.textContent =
+            "اعملي حساب جديد";
 
-        email,
+        authSubmitBtn.textContent =
+            "إنشاء حساب";
 
-        password
-
-      });
+        authSwitchText.innerHTML =
+            'عندك حساب بالفعل؟ <a onclick="toggleAuthMode()">تسجيل الدخول</a>';
 
     }
 
-    if (result.error) throw result.error;
+}
 
-    currentUser = result.data.user;
+// ===============================
+// إنشاء حساب / تسجيل دخول
+// ===============================
 
-    await ensureOwnerDoc();
+async function handleAuthSubmit() {
 
-    document.getElementById("loggedOutControls").style.display = "none";
+    hideError();
 
-    document.getElementById("loggedInControls").style.display = "inline-flex";
+    const email = authEmail.value.trim();
+    const password = authPassword.value.trim();
 
-    document.getElementById("ownerControls").style.display = "inline-flex";
+    if (!email || !password) {
+        showError("اكتبي البريد الإلكتروني وكلمة السر");
+        return;
+    }
 
-    document.getElementById("userEmailBadge").textContent = currentUser.email;
+    try {
 
-    closeAuthPanel();
+        let response;
 
-  }
+        if (authMode === "signup") {
 
-  catch (e) {
+            response = await supabase.auth.signUp({
+                email,
+                password
+            });
 
-    err.textContent = e.message;
+        } else {
 
-    err.style.display = "block";
+            response = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
 
-  }
+        }
+
+        if (response.error)
+            throw response.error;
+
+        currentUser = response.data.user;
+
+        if (typeof ensureOwnerDoc === "function") {
+            await ensureOwnerDoc();
+        }
+
+        updateUILoggedIn(currentUser);
+
+        closeAuthPanel();
+
+    } catch (err) {
+
+        showError(err.message);
+
+    }
 
 }
 
-// -------------------------------
-// تسجيل خروج
-// -------------------------------
+// ===============================
+// تسجيل الخروج
+// ===============================
+
 async function handleLogout() {
 
-  await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
 
-  currentUser = null;
+    if (error) {
 
-  document.getElementById("loggedOutControls").style.display = "inline-flex";
+        alert(error.message);
+        return;
 
-  document.getElementById("loggedInControls").style.display = "none";
+    }
 
-  document.getElementById("ownerControls").style.display = "none";
+    currentUser = null;
 
-  if (editMode) {
-
-    toggleEdit();
-
-  }
+    updateUILoggedOut();
 
 }
 
-// -------------------------------
+// ===============================
 // نسيت كلمة السر
-// -------------------------------
+// ===============================
+
 async function handleForgotPassword() {
 
-  const email = document.getElementById("authEmail").value.trim();
+    const email = authEmail.value.trim();
 
-  if (!email) {
+    if (!email) {
 
-    alert("اكتبي البريد الإلكتروني أولاً");
+        alert("اكتبي البريد الإلكتروني أولاً");
+        return;
 
-    return;
+    }
 
-  }
+    const { error } =
+        await supabase.auth.resetPasswordForEmail(email);
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) {
 
-  if (error) {
+        alert(error.message);
 
-    alert(error.message);
+    } else {
 
-  } else {
+        alert("تم إرسال رابط إعادة تعيين كلمة السر.");
 
-    alert("تم إرسال رابط إعادة تعيين كلمة السر إلى بريدك.");
-
-  }
+    }
 
 }
 
-// -------------------------------
-// Google Login
-// -------------------------------
+// ===============================
+// تسجيل دخول بجوجل
+// ===============================
+
 async function handleGoogleSignIn() {
 
-  await supabase.auth.signInWithOAuth({
+    const { error } =
+        await supabase.auth.signInWithOAuth({
 
-    provider: "google"
+            provider: "google"
 
-  });
+        });
+
+    if (error) {
+
+        alert(error.message);
+
+    }
 
 }
 
-// -------------------------------
-// التحقق عند فتح الموقع
-// -------------------------------
-supabase.auth.getSession().then(async ({ data }) => {
+// ===============================
+// عند فتح الموقع
+// ===============================
 
-  if (data.session) {
+async function checkSession() {
+
+    const { data } =
+        await supabase.auth.getSession();
+
+    if (!data.session) {
+
+        updateUILoggedOut();
+        return;
+
+    }
 
     currentUser = data.session.user;
 
-    document.getElementById("loggedOutControls").style.display = "none";
+    updateUILoggedIn(currentUser);
 
-    document.getElementById("loggedInControls").style.display = "inline-flex";
+    if (typeof ensureOwnerDoc === "function") {
+        await ensureOwnerDoc();
+    }
 
-    document.getElementById("ownerControls").style.display = "inline-flex";
+}
 
-    document.getElementById("userEmailBadge").textContent = currentUser.email;
+checkSession();
 
-    await ensureOwnerDoc();
+// ===============================
+// مراقبة حالة تسجيل الدخول
+// ===============================
 
-  }
+supabase.auth.onAuthStateChange(async (event, session) => {
 
-});
+    if (session) {
 
-// -------------------------------
-// مراقبة تسجيل الدخول والخروج
-// -------------------------------
-supabase.auth.onAuthStateChange((event, session) => {
+        currentUser = session.user;
 
-  currentUser = session ? session.user : null;
+        updateUILoggedIn(currentUser);
+
+        if (typeof ensureOwnerDoc === "function") {
+            await ensureOwnerDoc();
+        }
+
+    } else {
+
+        currentUser = null;
+
+        updateUILoggedOut();
+
+    }
 
 });
