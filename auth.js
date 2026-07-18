@@ -6,9 +6,6 @@
 let currentUser = null;
 let authMode = "login"; // login | signup
 
-// ===============================
-// عناصر الواجهة
-// ===============================
 const authOverlay = document.getElementById("authOverlay");
 const authError = document.getElementById("authError");
 const authEmail = document.getElementById("authEmail");
@@ -22,10 +19,6 @@ const loggedOutControls = document.getElementById("loggedOutControls");
 const loggedInControls = document.getElementById("loggedInControls");
 const ownerControls = document.getElementById("ownerControls");
 const userEmailBadge = document.getElementById("userEmailBadge");
-
-// ===============================
-// واجهة المستخدم
-// ===============================
 
 function openAuthPanel() {
     authOverlay.classList.add("open");
@@ -62,50 +55,22 @@ function updateUILoggedOut() {
     }
 }
 
-// ===============================
-// تبديل بين تسجيل الدخول وإنشاء حساب
-// ===============================
-
 function toggleAuthMode() {
-
-    authMode = authMode === "login"
-        ? "signup"
-        : "login";
+    authMode = authMode === "login" ? "signup" : "login";
 
     if (authMode === "login") {
-
-        authSubtitle.textContent =
-            "سجّلي دخولك عشان تقدري تعدّلي على الموقع";
-
-        authSubmitBtn.textContent =
-            "تسجيل الدخول";
-
-        authSwitchText.innerHTML =
-            'لسه معملتيش حساب؟ <a onclick="toggleAuthMode()">اعملي حساب جديد</a>';
-
+        authSubtitle.textContent = "سجّلي دخولك عشان تقدري تعدّلي على الموقع";
+        authSubmitBtn.textContent = "تسجيل الدخول";
+        authSwitchText.innerHTML = 'لسه معملتيش حساب؟ <a onclick="toggleAuthMode()">اعملي حساب جديد</a>';
     } else {
-
-        authSubtitle.textContent =
-            "اعملي حساب جديد";
-
-        authSubmitBtn.textContent =
-            "إنشاء حساب";
-
-        authSwitchText.innerHTML =
-            'عندك حساب بالفعل؟ <a onclick="toggleAuthMode()">تسجيل الدخول</a>';
-
+        authSubtitle.textContent = "اعملي حساب جديد";
+        authSubmitBtn.textContent = "إنشاء حساب";
+        authSwitchText.innerHTML = 'عندك حساب بالفعل؟ <a onclick="toggleAuthMode()">تسجيل الدخول</a>';
     }
-
 }
 
-// ===============================
-// إنشاء حساب / تسجيل دخول
-// ===============================
-
 async function handleAuthSubmit() {
-
     hideError();
-
     const email = authEmail.value.trim();
     const password = authPassword.value.trim();
 
@@ -115,27 +80,14 @@ async function handleAuthSubmit() {
     }
 
     try {
-
         let response;
-
         if (authMode === "signup") {
-
-            response = await supabase.auth.signUp({
-                email,
-                password
-            });
-
+            response = await sb.auth.signUp({ email, password });
         } else {
-
-            response = await supabase.auth.signInWithPassword({
-                email,
-                password
-            });
-
+            response = await sb.auth.signInWithPassword({ email, password });
         }
 
-        if (response.error)
-            throw response.error;
+        if (response.error) throw response.error;
 
         currentUser = response.data.user;
 
@@ -144,139 +96,51 @@ async function handleAuthSubmit() {
         }
 
         updateUILoggedIn(currentUser);
-
         closeAuthPanel();
 
     } catch (err) {
-
         showError(err.message);
-
     }
-
 }
-
-// ===============================
-// تسجيل الخروج
-// ===============================
 
 async function handleLogout() {
-
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-
-        alert(error.message);
-        return;
-
-    }
-
+    const { error } = await sb.auth.signOut();
+    if (error) { alert(error.message); return; }
     currentUser = null;
-
     updateUILoggedOut();
-
 }
-
-// ===============================
-// نسيت كلمة السر
-// ===============================
 
 async function handleForgotPassword() {
-
     const email = authEmail.value.trim();
+    if (!email) { alert("اكتبي البريد الإلكتروني أولاً"); return; }
 
-    if (!email) {
-
-        alert("اكتبي البريد الإلكتروني أولاً");
-        return;
-
-    }
-
-    const { error } =
-        await supabase.auth.resetPasswordForEmail(email);
-
-    if (error) {
-
-        alert(error.message);
-
-    } else {
-
-        alert("تم إرسال رابط إعادة تعيين كلمة السر.");
-
-    }
-
+    const { error } = await sb.auth.resetPasswordForEmail(email);
+    if (error) { alert(error.message); }
+    else { alert("تم إرسال رابط إعادة تعيين كلمة السر."); }
 }
-
-// ===============================
-// تسجيل دخول بجوجل
-// ===============================
 
 async function handleGoogleSignIn() {
-
-    const { error } =
-        await supabase.auth.signInWithOAuth({
-
-            provider: "google"
-
-        });
-
-    if (error) {
-
-        alert(error.message);
-
-    }
-
+    const { error } = await sb.auth.signInWithOAuth({ provider: "google" });
+    if (error) { alert(error.message); }
 }
 
-// ===============================
-// عند فتح الموقع
-// ===============================
-
 async function checkSession() {
-
-    const { data } =
-        await supabase.auth.getSession();
-
-    if (!data.session) {
-
-        updateUILoggedOut();
-        return;
-
-    }
-
+    const { data } = await sb.auth.getSession();
+    if (!data.session) { updateUILoggedOut(); return; }
     currentUser = data.session.user;
-
     updateUILoggedIn(currentUser);
-
-    if (typeof ensureOwnerDoc === "function") {
-        await ensureOwnerDoc();
-    }
-
+    if (typeof ensureOwnerDoc === "function") { await ensureOwnerDoc(); }
 }
 
 checkSession();
 
-// ===============================
-// مراقبة حالة تسجيل الدخول
-// ===============================
-
-supabase.auth.onAuthStateChange(async (event, session) => {
-
+sb.auth.onAuthStateChange(async (event, session) => {
     if (session) {
-
         currentUser = session.user;
-
         updateUILoggedIn(currentUser);
-
-        if (typeof ensureOwnerDoc === "function") {
-            await ensureOwnerDoc();
-        }
-
+        if (typeof ensureOwnerDoc === "function") { await ensureOwnerDoc(); }
     } else {
-
         currentUser = null;
-
         updateUILoggedOut();
-
     }
-
 });
