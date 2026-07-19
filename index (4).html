@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FolioMe</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✦</text></svg>">
+<meta property="og:title" content="FolioMe - بورتفوليو شخصي">
+<meta property="og:description" content="بورتفوليو شخصي فيه شهاداتي، أعمالي، ومقالاتي">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- SUPABASE: مكتبة الحسابات وقاعدة البيانات والتخزين -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --paper:#171A21;
+    --paper-alt:#1E222B;
+    --card:#1B1F27;
+    --ink:#EDEEF1;
+    --ink-soft:#A6ABB6;
+    --ink-faint:#6D7280;
+    --pine:#3FBFA6;
+    --pine-dark:#2C8B78;
+    --amber:#E8A34B;
+    --plum:#B07CE0;
+    --rust:#E5735F;
+    --line: rgba(255,255,255,.08);
+    --line-strong: rgba(255,255,255,.16);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(900px 500px at 100% -10%, rgba(63,191,166,.10), transparent 55%),
+      radial-gradient(700px 500px at 0% 100%, rgba(232,163,75,.06), transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans Arabic',sans-serif;
+    min-height:100vh;
+  }
+  h1,h2,h3,.disp{ font-family:'Cairo',sans-serif; font-weight:800; }
+  ::selection{ background: rgba(63,191,166,.35); }
+
+  .app{ display:flex; min-height:100vh; }
+
+  /* ---------- sidebar ---------- */
+  .sidebar{
+    width:280px; flex:0 0 280px; background:var(--paper-alt); border-left:1px solid var(--line);
+    padding:34px 22px; position:sticky; top:0; align-self:flex-start; height:100vh; overflow-y:auto;
+    display:flex; flex-direction:column; gap:26px;
+  }
+  .avatarblock{ text-align:center; }
+  .photowrap{
+    width:108px; height:108px; border-radius:28px; margin:0 auto 16px;
+    background:var(--card); border:1px solid var(--line-strong);
+    display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;
+  }
+  .photowrap img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .photowrap .ph-emoji{ font-size:40px; }
+  .photobtn{
+    position:absolute; bottom:4px; left:4px; background:var(--pine); color:#0C1613;
+    border:none; width:28px; height:28px; border-radius:50%; font-size:13px;
+    display:none; align-items:center; justify-content:center; pointer-events:none;
+  }
+  body.edit-mode .photobtn{ display:flex; }
+  body.edit-mode .photowrap{ cursor:pointer; }
+  body.edit-mode .photowrap:hover{ box-shadow:0 0 0 3px var(--amber); }
+
+  .name{ font-size:22px; font-weight:800; margin:0 0 6px; color:var(--ink); }
+  .tagline{ font-size:13px; color:var(--ink-soft); line-height:1.7; margin:0 0 14px; }
+  .metarow{ display:flex; flex-direction:column; gap:6px; font-size:12.5px; color:var(--ink-faint); align-items:center;}
+  .metarow span{ display:flex; align-items:center; gap:5px; }
+
+  [contenteditable="true"]{ outline:none; }
+  body.edit-mode [data-field], body.edit-mode [data-arr]{
+    border:1px solid var(--line-strong); background:var(--paper); border-radius:7px;
+    padding:3px 8px; cursor:text; display:inline-block;
+  }
+  body.edit-mode .storytext[data-field]{ display:block; padding:12px 14px; }
+  body.edit-mode [data-field]:focus, body.edit-mode [data-arr]:focus{
+    border-color:var(--amber); background:var(--card);
+  }
+  body.edit-mode .ttl-text, body.edit-mode .ttl-text:focus{
+    border:none; background:none; padding:0; display:inline;
+  }
+
+  .statusbadge{
+    display:inline-flex; align-items:center; gap:6px; margin-inline-start:10px;
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:4px 12px 4px 10px; font-size:11.5px; font-weight:700; color:var(--ink-soft);
+    cursor:pointer;
+  }
+  body.edit-mode .statusbadge{ border-style:dashed; }
+  .dotpulse{ width:8px; height:8px; border-radius:50%; background:#5DAE6B; flex:0 0 auto; }
+  .statusbadge.busy .dotpulse{ background:var(--rust); }
+  .contactbtn{
+    display:inline-block; margin-top:14px; background:var(--pine); color:#0C1613; border:none;
+    border-radius:10px; padding:9px 18px; font-family:'IBM Plex Sans Arabic',sans-serif; font-weight:700;
+    font-size:12.5px; cursor:pointer;
+  }
+  .contactbtn:hover{ background:var(--pine-dark); }
+
+  .tabbar{ display:flex; flex-direction:column; gap:3px; }
+  .tabbtn{
+    font-family:'IBM Plex Sans Arabic',sans-serif; font-weight:600; font-size:13.5px; text-align:right;
+    border:none; border-inline-start:3px solid transparent;
+    background:transparent; color:var(--ink-soft);
+    padding:10px 12px; border-radius:8px; cursor:pointer; transition:.15s;
+    display:flex; align-items:center; gap:10px;
+  }
+  .tabbtn:hover{ background:rgba(255,255,255,.04); color:var(--ink); }
+  .tabbtn.active{ background:rgba(255,255,255,.06); color:var(--ink); border-inline-start-color:var(--tabcolor,var(--pine)); }
+
+  /* ---------- main ---------- */
+  .main{ flex:1; min-width:0; }
+  .utilitybar{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px; padding:14px 30px; background:transparent; border-bottom:1px solid var(--line);
+    font-size:13px; flex-wrap:wrap;
+  }
+  .utilitybar .left, .utilitybar .right{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .utilitybar button{
+    background:var(--paper-alt); color:var(--ink); border:1px solid var(--line-strong);
+    border-radius:20px; padding:6px 14px; font-family:'IBM Plex Sans Arabic',sans-serif; font-size:12.5px;
+    cursor:pointer; transition:.15s;
+  }
+  .utilitybar button:hover{ background:rgba(255,255,255,.08); }
+  .utilitybar button.on{ background:var(--amber); color:#241705; border-color:var(--amber); font-weight:700;}
+  .savebadge{ font-size:11.5px; opacity:.7; }
+  #fileInput{ display:none; }
+
+  .banner{ padding:0 30px; }
+  .banner-inner{
+    background:#3A2A16; color:#F3E7CE; font-size:13px; padding:10px 16px; border-radius:8px; margin-top:14px;
+    display:none;
+  }
+
+  /* ---------- auth overlay ---------- */
+  #authOverlay{
+    position:fixed; inset:0; background:rgba(5,6,8,.65); z-index:100;
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  #authOverlay.open{ display:flex; }
+  .authcard{
+    background:var(--paper-alt); border:1px solid var(--line-strong); border-radius:16px;
+    padding:36px 32px; width:100%; max-width:380px; box-shadow:0 18px 40px -20px rgba(0,0,0,.6);
+    position:relative;
+  }
+  .authcard h2{ margin:0 0 6px; font-size:24px; color:var(--ink); }
+  .authcard p.sub{ color:var(--ink-faint); font-size:13px; margin:0 0 22px; }
+  .authcard label{ font-size:12.5px; font-weight:700; color:var(--ink-soft); display:block; margin:14px 0 5px; }
+  .authcard input{
+    width:100%; padding:11px 13px; border:1px solid var(--line-strong); border-radius:8px;
+    background:var(--paper); color:var(--ink); font-family:'IBM Plex Sans Arabic',sans-serif; font-size:14px;
+  }
+  .authcard input:focus{ outline:2px solid var(--amber); }
+  .authbtn{
+    width:100%; margin-top:20px; padding:12px; border:none; border-radius:9px;
+    background:var(--pine); color:#0C1613; font-family:'IBM Plex Sans Arabic',sans-serif; font-weight:700;
+    font-size:14.5px; cursor:pointer;
+  }
+  .authbtn:hover{ background:var(--pine-dark); }
+  .authswitch{ text-align:center; margin-top:16px; font-size:13px; color:var(--ink-faint); }
+  .authswitch a{ color:var(--pine); font-weight:700; cursor:pointer; text-decoration:underline; }
+  .autherr{ color:var(--rust); font-size:12.5px; margin-top:12px; display:none; }
+  .authloading{ text-align:center; color:var(--ink-faint); font-size:13px; }
+
+  .sociallinks{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .sociallinks:empty{ display:none; }
+  .social-chip{
+    display:flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--line);
+    border-radius:20px; padding:6px 12px 6px 8px; font-size:12px; position:relative; color:var(--ink);
+  }
+  .social-chip a{ color:var(--pine); text-decoration:none; font-weight:700; }
+  .social-chip .delbtn{ position:static; width:18px; height:18px; font-size:11px; }
+  .urlfield{ font-size:10.5px; color:var(--ink-faint); max-width:120px; overflow:hidden; }
+  .urlfield:empty:before{ content:"حطّي الرابط هنا"; }
+
+  .page{ max-width:900px; margin:0 auto; padding:36px 30px 70px; }
+  .section{ display:none; animation:fade .25s ease; }
+  .section.active{ display:block; }
+  @keyframes fade{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+
+  .sectitle{ font-size:24px; font-weight:800; color:var(--ink); margin:0 0 6px; }
+  .secdesc{ color:var(--ink-faint); font-size:13.5px; margin:0 0 24px; }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px; position:relative; }
+  .card .ttl{
+    font-weight:700; font-size:15px; margin:0 0 10px; color:var(--ink);
+    border:1px solid var(--line-strong); background:var(--paper); border-radius:8px;
+    padding:8px 11px; display:flex; align-items:center; gap:8px;
+  }
+  .card .ttl .ttl-icon{ font-size:14px; opacity:.85; flex:0 0 auto; }
+  .card .ttl .ttl-text{ flex:1; min-width:0; }
+  body.edit-mode .card .ttl{ background:var(--card); }
+  body.edit-mode .card .ttl:focus-within{ border-color:var(--amber); }
+  .card .sub{ font-size:12px; color:var(--pine); font-weight:700; margin:0 0 8px; display:inline-block; }
+  .card .desc{ font-size:13px; color:var(--ink-soft); line-height:1.7; }
+  .cardimg{ width:100%; height:120px; object-fit:cover; border-radius:8px; margin-bottom:10px; display:block; background:var(--paper-alt); }
+
+  .delbtn{
+    position:absolute; top:8px; left:8px; width:24px; height:24px; border-radius:50%;
+    border:1px solid var(--line-strong); background:var(--paper-alt); color:var(--rust);
+    font-size:13px; line-height:1; cursor:pointer; display:none; align-items:center; justify-content:center;
+  }
+  body.edit-mode .delbtn{ display:flex; }
+  .imgbtn{
+    display:none; font-size:11.5px; color:var(--pine); background:none; border:1px dashed var(--line-strong);
+    border-radius:6px; padding:4px 8px; cursor:pointer; margin-bottom:8px;
+  }
+  body.edit-mode .imgbtn{ display:inline-block; }
+
+  .addbtn{
+    display:none; margin-top:6px; background:none; border:1.5px dashed var(--pine);
+    color:var(--pine); font-family:'IBM Plex Sans Arabic',sans-serif; font-weight:700; font-size:13.5px;
+    padding:10px 18px; border-radius:10px; cursor:pointer; width:100%;
+  }
+  body.edit-mode .addbtn{ display:block; }
+
+  .timeline{ position:relative; padding-inline-start:26px; }
+  .timeline:before{ content:""; position:absolute; right:6px; top:4px; bottom:4px; width:2px; background:var(--line-strong); }
+  .tlitem{ position:relative; padding-bottom:22px; padding-inline-end:6px; }
+  .tlitem:before{ content:""; position:absolute; right:-26px; top:4px; width:12px; height:12px; border-radius:50%; background:var(--amber); border:2px solid var(--paper); box-shadow:0 0 0 1px var(--line-strong); }
+  .tlitem .yr{ font-size:12px; font-weight:700; color:var(--amber); }
+  .tlitem .tt{ font-weight:700; font-size:15px; margin:2px 0 4px; color:var(--ink); }
+
+  .storytext{ font-size:15px; line-height:2; color:var(--ink-soft); white-space:pre-wrap; }
+
+  .skillrow{ display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  .skillname{ min-width:140px; font-weight:700; font-size:14px; color:var(--ink); }
+  .dots{ display:flex; gap:5px; }
+  .dot{ width:12px; height:12px; border-radius:50%; border:1.5px solid var(--pine); cursor:default; }
+  .dot.on{ background:var(--pine); }
+  body.edit-mode .dot{ cursor:pointer; }
+
+  .hobbies{ display:flex; flex-wrap:wrap; gap:10px; }
+  .hobby{ background:var(--card); border:1px solid var(--line); border-radius:20px; padding:8px 16px; font-size:14px; display:flex; align-items:center; gap:8px; position:relative; color:var(--ink); }
+
+  .stars{ display:flex; gap:3px; }
+  .star{ cursor:default; color:var(--line-strong); font-size:16px; }
+  .star.on{ color:var(--amber); }
+  body.edit-mode .star{ cursor:pointer; }
+
+  @media(max-width:880px){
+    .app{ flex-direction:column; }
+    .sidebar{ width:100%; flex:none; position:static; height:auto; flex-direction:row; align-items:center; padding:18px 16px; gap:16px; }
+    .avatarblock{ text-align:right; display:flex; align-items:center; gap:12px; flex:1; }
+    .photowrap{ margin:0; width:56px; height:56px; border-radius:14px; }
+    .tagline,.metarow{ display:none; }
+    .tabbar{ display:none; }
+    .page{ padding:24px 16px; }
+  }
+
+  @media print{
+    .sidebar, .utilitybar, .tabbar, #authOverlay, .addbtn, .delbtn, .imgbtn, .photobtn{ display:none !important; }
+    .app{ display:block; }
+    body{ background:#fff; color:#000; }
+    .page{ max-width:100%; padding:10px; }
+    .section{ display:block !important; page-break-inside:avoid; margin-bottom:26px; }
+    .sectitle{ color:#000; border-bottom:2px solid #000; padding-bottom:6px; }
+    .card, .hobby, .social-chip{ background:#fff; border:1px solid #999; color:#000; }
+    .card .ttl, .storytext, .card .desc, .skillname{ color:#000; }
+  }
+</style>
+</head>
+<body>
+<div id="errBanner" style="display:none;position:fixed;top:0;right:0;left:0;z-index:999;background:#B4322A;color:#fff;padding:14px 16px;font-family:sans-serif;font-size:13px;direction:rtl;text-align:right;white-space:pre-wrap;"></div>
+<script>
+  function showErr(msg){
+    const el=document.getElementById('errBanner');
+    el.style.display='block';
+    el.textContent='حصل خطأ: ' + msg;
+  }
+  window.onerror = function(msg, url, line){ showErr(msg + ' (سطر ' + line + ')'); };
+  window.addEventListener('unhandledrejection', function(ev){
+    showErr((ev.reason && ev.reason.message) ? ev.reason.message : JSON.stringify(ev.reason));
+  });
+</script>
+
+<div id="authOverlay">
+  <div class="authcard">
+    <button onclick="closeAuthPanel()" style="position:absolute;top:14px;left:14px;background:none;border:none;font-size:18px;color:var(--ink-faint);cursor:pointer;">×</button>
+    <h2>FolioMe</h2>
+    <p class="sub" id="authSubtitle">سجّلي دخولك عشان تقدري تعدّلي على الموقع</p>
+    <div id="authForm">
+      <div id="usernameField" style="display:none">
+        <label>اسم المستخدم (هيبقى جزء من رابط بورتفوليوك)</label>
+        <input type="text" id="authUsername" placeholder="مثلاً: reham-ahmed">
+      </div>
+      <label>البريد الإلكتروني</label>
+      <input type="email" id="authEmail" placeholder="example@email.com">
+      <label>كلمة السر</label>
+      <input type="password" id="authPassword" placeholder="6 أحرف على الأقل">
+      <p class="authswitch" style="text-align:left;margin:6px 0 0"><a onclick="handleForgotPassword()">نسيت كلمة السر؟</a></p>
+      <button class="authbtn" id="authSubmitBtn" onclick="handleAuthSubmit()">تسجيل الدخول</button>
+      <p class="autherr" id="authError"></p>
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 0;color:var(--ink-faint);font-size:12px;">
+        <span style="flex:1;height:1px;background:var(--line-strong)"></span>أو<span style="flex:1;height:1px;background:var(--line-strong)"></span>
+      </div>
+      <button class="authbtn" type="button" style="background:#fff;color:#3c4043;border:1px solid var(--line-strong);display:flex;align-items:center;justify-content:center;gap:10px;" onclick="handleGoogleSignIn()">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.84 2.09-1.8 2.73v2.27h2.92c1.7-1.57 2.68-3.88 2.68-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.27c-.81.54-1.85.86-3.04.86-2.34 0-4.32-1.58-5.03-3.71H.96v2.33C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.97 10.7c-.18-.54-.28-1.11-.28-1.7s.1-1.16.28-1.7V4.97H.96A8.996 8.996 0 000 9c0 1.45.35 2.83.96 4.03l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.97l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+        الدخول بحساب Google
+      </button>
+      <p class="authswitch" id="authSwitchText">لسه معملتيش حساب؟ <a onclick="toggleAuthMode()">اعملي حساب جديد</a></p>
+    </div>
+    <p class="authloading" id="authLoading" style="display:none">لحظة واحدة...</p>
+  </div>
+</div>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="avatarblock">
+      <div class="photowrap" id="photowrap" onclick="if(editMode) document.getElementById('photoInput').click()">
+        <span class="ph-emoji" id="photoEmoji">✦</span>
+        <img id="photoImg" style="display:none">
+        <button class="photobtn" type="button" title="تغيير الصورة">📷</button>
+        <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhoto(event)">
+      </div>
+      <div>
+        <h1 class="name" data-field="about.name" contenteditable="false" style="display:inline-block"></h1>
+        <div><span class="statusbadge" id="statusBadge" onclick="cycleStatus()"><span class="dotpulse"></span><span id="statusText"></span></span></div>
+        <p class="tagline" data-field="about.tagline" contenteditable="false"></p>
+        <div class="metarow">
+          <span>✉️ <span data-field="about.email" contenteditable="false"></span></span>
+          <span>📍 <span data-field="about.location" contenteditable="false"></span></span>
+          <span>📱 <span data-field="about.phone" contenteditable="false"></span></span>
+          <span id="visitCounter" style="display:none">👁️ <span id="visitCounterNum">0</span> <span data-i18n="visits_label">زيارة</span></span>
+        </div>
+        <div class="sociallinks" id="socialList"></div>
+        <button class="addbtn" style="width:auto;padding:6px 14px;font-size:12px;margin-top:8px" onclick="addItem('social')">+ رابط تواصل</button>
+        <div><button class="contactbtn" onclick="openContact()" data-i18n="contact_btn">✉️ تواصل معايا</button></div>
+        <div id="shareBox" style="display:none;flex-direction:column;gap:6px;margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;">
+          <span style="font-size:11px;color:var(--ink-faint);font-weight:700;">رابط بورتفوليوك (شاركيه):</span>
+          <span id="shareLink" style="font-size:11px;color:var(--pine);word-break:break-all;"></span>
+          <button onclick="copyShareLink()" style="align-self:flex-start;font-size:11px;background:var(--pine);color:#0C1613;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-weight:700;">📋 نسخ الرابط</button>
+        </div>
+      </div>
+    </div>
+    <nav class="tabbar" id="tabbar"></nav>
+  </aside>
+
+  <main class="main">
+    <div class="utilitybar">
+      <div class="right">
+        <span style="font-weight:900;letter-spacing:.3px;color:var(--pine);">FolioMe</span>
+        <span id="ownerControls" style="display:none;gap:8px;align-items:center;">
+          <button id="editToggle" onclick="toggleEdit()">✏️ تفعيل التعديل</button>
+          <span class="savebadge" id="saveBadge">جاهزة للتعديل</span>
+        </span>
+      </div>
+      <div class="left">
+        <button onclick="window.print()" data-i18n="pdf_btn">📄 تحميل PDF</button>
+        <button onclick="toggleLang()" id="langToggle">EN</button>
+        <span id="loggedOutControls">
+          <button onclick="openAuthPanel()" data-i18n="login_btn">🔐 تسجيل الدخول</button>
+        </span>
+        <span id="loggedInControls" style="display:none;gap:8px;align-items:center;">
+          <span class="savebadge" id="userEmailBadge" style="opacity:.6"></span>
+          <button onclick="handleLogout()">🚪 تسجيل خروج</button>
+          <button onclick="downloadBackup()">⬇️ نسخة احتياطية</button>
+          <button onclick="document.getElementById('fileInput').click()">⬆️ استيراد نسخة</button>
+          <input type="file" id="fileInput" accept="application/json" onchange="importBackup(event)">
+        </span>
+      </div>
+    </div>
+
+    <div id="demoBanner" style="display:none;background:var(--amber);color:#241705;padding:10px 30px;font-size:13px;font-weight:700;text-align:center;">
+      ده مثال بس لشكل الموقع - سجّلي دخولك (🔐 فوق) واعملي حساب عشان تبدئي بورتفوليو خاص بيكِ
+    </div>
+
+    <div id="createPortfolioBox" style="display:none;background:var(--paper-alt);border-bottom:1px solid var(--line);padding:20px 30px;text-align:center;">
+      <p style="margin:0 0 10px;font-size:14px;color:var(--ink);font-weight:700;">أهلًا بيكِ! اختاري اسم مستخدم عشان نبدأ بورتفوليوك</p>
+      <input type="text" id="newUsernameInput" placeholder="مثلاً: reham-ahmed" style="padding:8px 12px;border-radius:8px;border:1px solid var(--line-strong);background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans Arabic',sans-serif;min-width:220px;">
+      <button onclick="submitCreatePortfolio()" style="margin-inline-start:8px;background:var(--pine);color:#0C1613;border:none;border-radius:8px;padding:9px 18px;font-weight:700;cursor:pointer;">إنشاء البورتفوليو</button>
+      <p id="createPortfolioError" style="color:var(--rust);font-size:12px;margin-top:8px;display:none;"></p>
+    </div>
+
+    <div class="page">
+
+      <section class="section" data-section="about">
+        <h2 class="sectitle" data-i18n="about_title">عن نفسي</h2>
+        <p class="secdesc" data-i18n="about_desc">اكتبي هنا نبذة عنك تعرّفي بيها الزوّار عليكِ.</p>
+        <p class="storytext" data-field="about.bio" contenteditable="false"></p>
+      </section>
+
+      <section class="section" data-section="story">
+        <h2 class="sectitle" data-i18n="story_title">قصتي وخبرتي</h2>
+        <p class="secdesc" data-i18n="story_desc">احكي هنا رحلتك: من فين بدأتِ، الصعوبات اللي واجهتيها، وإزاي وصلتِ للنجاحات.</p>
+        <p class="storytext" data-field="story.text" contenteditable="false"></p>
+        <h3 style="margin-top:28px;font-size:17px;color:var(--ink)" data-i18n="milestones_title">محطات في الرحلة</h3>
+        <div class="timeline" id="timelineList"></div>
+        <button class="addbtn" onclick="addItem('timeline')">+ إضافة محطة</button>
+      </section>
+
+      <section class="section" data-section="services">
+        <h2 class="sectitle" data-i18n="services_title">الخدمات</h2>
+        <p class="secdesc" data-i18n="services_desc">الخدمات اللي بتقدّميها.</p>
+        <div class="grid" id="servicesList"></div>
+        <button class="addbtn" onclick="addItem('services')">+ إضافة خدمة</button>
+      </section>
+
+      <section class="section" data-section="certificates">
+        <h2 class="sectitle" data-i18n="certificates_title">الشهادات</h2>
+        <p class="secdesc" data-i18n="certificates_desc">شهادات الكورسات والدورات اللي أخدتيها.</p>
+        <div class="grid" id="certificatesList"></div>
+        <button class="addbtn" onclick="addItem('certificates')">+ إضافة شهادة</button>
+      </section>
+
+      <section class="section" data-section="courses">
+        <h2 class="sectitle" data-i18n="courses_title">الدورات</h2>
+        <p class="secdesc" data-i18n="courses_desc">الدورات اللي سجّلتِ فيها وخلّصتيها.</p>
+        <div class="grid" id="coursesList"></div>
+        <button class="addbtn" onclick="addItem('courses')">+ إضافة دورة</button>
+      </section>
+
+      <section class="section" data-section="portfolio">
+        <h2 class="sectitle" data-i18n="portfolio_title">الأعمال والتصاميم</h2>
+        <p class="secdesc" data-i18n="portfolio_desc">مشاريعك، تصاميمك، والمواقع اللي عملتيها.</p>
+        <div class="grid" id="portfolioList"></div>
+        <button class="addbtn" onclick="addItem('portfolio')">+ إضافة عمل</button>
+      </section>
+
+      <section class="section" data-section="articles">
+        <h2 class="sectitle" data-i18n="articles_title">المقالات</h2>
+        <p class="secdesc" data-i18n="articles_desc">المقالات اللي كتبتيها.</p>
+        <div class="grid" id="articlesList"></div>
+        <button class="addbtn" onclick="addItem('articles')">+ إضافة مقال</button>
+      </section>
+
+      <section class="section" data-section="books">
+        <h2 class="sectitle" data-i18n="books_title">الكتب اللي قرأتها</h2>
+        <p class="secdesc" data-i18n="books_desc">قائمة بالكتب اللي قرأتيها وتقييمك ليها.</p>
+        <div class="grid" id="booksList"></div>
+        <button class="addbtn" onclick="addItem('books')">+ إضافة كتاب</button>
+      </section>
+
+      <section class="section" data-section="skills">
+        <h2 class="sectitle" data-i18n="skills_title">المهارات والهوايات</h2>
+        <p class="secdesc" data-i18n="skills_desc">المهارات اللي اكتسبتيها ودرجة إتقانك ليها.</p>
+        <div id="skillsList"></div>
+        <button class="addbtn" onclick="addItem('skills')">+ إضافة مهارة</button>
+        <h3 style="margin-top:30px;font-size:17px;color:var(--ink)" data-i18n="hobbies_title">هواياتي</h3>
+        <div class="hobbies" id="hobbiesList"></div>
+        <button class="addbtn" onclick="addItem('hobbies')">+ إضافة هواية</button>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+/* ====== SUPABASE CONFIG - حطّي بيانات مشروعك هنا (من Supabase Dashboard) ====== */
+const SUPABASE_URL = "https://cdohqzyaynuaczbgepsh.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkb2hxenlheW51YWN6YmdlcHNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5ODY2OTIsImV4cCI6MjA5OTU2MjY5Mn0.4rSs9voibdeFlf9lG6hrSY-tv_yAzugFWZ6Z0WMzFco";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/* ============================================================================== */
+// كل مستخدمة بياناتها في صف منفصل، معرّفه هو اسم المستخدم بتاعها
+const TAB_COLORS=['pine','amber','plum','rust','pine','amber','plum','rust','amber'];
+const TABS=[
+  {id:'about',label:'الرئيسية', icon:'🏠'},
+  {id:'story',label:'قصتي', icon:'📖'},
+  {id:'services',label:'الخدمات', icon:'💼'},
+  {id:'certificates',label:'الشهادات', icon:'🎓'},
+  {id:'courses',label:'الدورات', icon:'📚'},
+  {id:'portfolio',label:'الأعمال والتصاميم', icon:'🎨'},
+  {id:'articles',label:'المقالات', icon:'✍️'},
+  {id:'books',label:'الكتب', icon:'📗'},
+  {id:'skills',label:'المهارات والهوايات', icon:'⚡'}
+];
+
+/* ====== ترجمة الواجهة (عربي/إنجليزي) - النصوص الثابتة بس، مش محتوى المالكة ====== */
+let currentLang='ar';
+const I18N={
+  ar:{
+    tabs:{about:'الرئيسية', story:'قصتي', services:'الخدمات', certificates:'الشهادات', courses:'الدورات', portfolio:'الأعمال والتصاميم', articles:'المقالات', books:'الكتب', skills:'المهارات والهوايات'},
+    about_title:'عن نفسي', about_desc:'اكتبي هنا نبذة عنك تعرّفي بيها الزوّار عليكِ.',
+    story_title:'قصتي وخبرتي', story_desc:'احكي هنا رحلتك: من فين بدأتِ، الصعوبات اللي واجهتيها، وإزاي وصلتِ للنجاحات.',
+    services_title:'الخدمات', services_desc:'الخدمات اللي بتقدّميها.',
+    certificates_title:'الشهادات', certificates_desc:'شهادات الكورسات والدورات اللي أخدتيها.',
+    courses_title:'الدورات', courses_desc:'الدورات اللي سجّلتِ فيها وخلّصتيها.',
+    portfolio_title:'الأعمال والتصاميم', portfolio_desc:'مشاريعك، تصاميمك، والمواقع اللي عملتيها.',
+    articles_title:'المقالات', articles_desc:'المقالات اللي كتبتيها.',
+    books_title:'الكتب اللي قرأتها', books_desc:'قائمة بالكتب اللي قرأتيها وتقييمك ليها.',
+    skills_title:'المهارات والهوايات', skills_desc:'المهارات اللي اكتسبتيها ودرجة إتقانك ليها.',
+    pdf_btn:'📄 تحميل PDF', login_btn:'🔐 تسجيل الدخول', contact_btn:'✉️ تواصل معايا',
+    visits_label:'زيارة', milestones_title:'محطات في الرحلة', hobbies_title:'هواياتي',
+    status_available:'متاحة للعمل', status_busy:'مشغولة حاليًا'
+  },
+  en:{
+    tabs:{about:'Home', story:'My Story', services:'Services', certificates:'Certificates', courses:'Courses', portfolio:'Portfolio', articles:'Articles', books:'Books', skills:'Skills & Hobbies'},
+    about_title:'About Me', about_desc:'A short bio to introduce yourself to visitors.',
+    story_title:'My Story & Experience', story_desc:'Tell your journey: where you started, the challenges you faced, and how you reached your successes.',
+    services_title:'Services', services_desc:'Services you offer.',
+    certificates_title:'Certificates', certificates_desc:'Certificates from courses you have completed.',
+    courses_title:'Courses', courses_desc:'Courses you enrolled in and finished.',
+    portfolio_title:'Portfolio & Designs', portfolio_desc:'Your projects, designs, and websites.',
+    articles_title:'Articles', articles_desc:'Articles you have written.',
+    books_title:'Books I\'ve Read', books_desc:'A list of books you\'ve read and your rating.',
+    skills_title:'Skills & Hobbies', skills_desc:'Skills you\'ve gained and your proficiency level.',
+    pdf_btn:'📄 Download PDF', login_btn:'🔐 Log In', contact_btn:'✉️ Contact Me',
+    visits_label:'visits', milestones_title:'Journey Milestones', hobbies_title:'My Hobbies',
+    status_available:'Available for work', status_busy:'Currently busy'
+  }
+};
+function toggleLang(){
+  currentLang = currentLang==='ar' ? 'en' : 'ar';
+  applyLanguage();
+}
+function applyLanguage(){
+  const dict = I18N[currentLang];
+  document.getElementById('langToggle').textContent = currentLang==='ar' ? 'EN' : 'AR';
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if(dict[key]) el.textContent = dict[key];
+  });
+  document.querySelectorAll('.tabbtn').forEach((btn,i)=>{
+    const tab = TABS[i];
+    if(!tab) return;
+    const iconSpan = btn.querySelector('span:first-child');
+    if(iconSpan && btn.children.length>1){
+      btn.lastElementChild.textContent = dict.tabs[tab.id] || tab.label;
+    }else{
+      btn.textContent = dict.tabs[tab.id] || tab.label;
+    }
+  });
+  if(document.getElementById('statusText')) renderStatusBadge();
+}
+
+function seedData(){
+  return {
+    about:{
+      name:'اسمك هنا',
+      tagline:'اكتبي هنا جملة قصيرة تعرّفك: مين إنتِ، وبتشتغلي في إيه',
+      bio:'اكتبي هنا نبذة عن نفسك: مين إنتِ، بتحبي إيه، وشغفك في إيه...',
+      email:'بريدك الإلكتروني',
+      location:'المكان',
+      phone:'رقم موبايلك',
+      status:'available',
+      photo:null
+    },
+    story:{ text:'ابدئي حكاية رحلتك هنا... من أين بدأتِ، الصعوبات اللي واجهتيها، وإزاي قدرتِ تتخطيها وتوصلي للنجاحات اللي حققتيها.' },
+    timeline:[
+      {year:'٢٠٢٢', title:'بداية الرحلة', text:'اكتبي هنا إيه اللي خلاكِ تبدئي'},
+      {year:'٢٠٢٤', title:'تحدي واجهتيه', text:'اكتبي هنا صعوبة قابلتيها وإزاي تعاملتِ معاها'},
+      {year:'٢٠٢٦', title:'إنجاز حققتيه', text:'اكتبي هنا نجاح فخورة بيه'}
+    ],
+    services:[
+      {title:'اسم الخدمة', desc:'وصف قصير عن الخدمة وإيه اللي بتقدميه فيها', price:'السعر أو "على حسب المشروع"', duration:'مدة التنفيذ'},
+      {title:'اسم الخدمة', desc:'وصف قصير عن الخدمة وإيه اللي بتقدميه فيها', price:'السعر أو "على حسب المشروع"', duration:'مدة التنفيذ'}
+    ],
+    certificates:[
+      {title:'اسم الشهادة', org:'الجهة المانحة', date:'٢٠٢٤', desc:'اكتبي وصف مختصر عن الشهادة وإيه اللي اتعلمتيه منها', image:null},
+      {title:'اسم الشهادة', org:'الجهة المانحة', date:'٢٠٢٤', desc:'اكتبي وصف مختصر عن الشهادة وإيه اللي اتعلمتيه منها', image:null}
+    ],
+    courses:[
+      {title:'اسم الدورة', platform:'المنصة (يوديمي، كورسيرا...)', date:'٢٠٢٤', status:'مكتملة'},
+      {title:'اسم الدورة', platform:'المنصة (يوديمي، كورسيرا...)', date:'٢٠٢٤', status:'مكتملة'}
+    ],
+    portfolio:[
+      {title:'اسم المشروع أو الموقع', type:'تصميم / موقع ويب', desc:'وصف قصير عن المشروع', link:'', image:null},
+      {title:'اسم المشروع أو الموقع', type:'تصميم / موقع ويب', desc:'وصف قصير عن المشروع', link:'', image:null}
+    ],
+    articles:[
+      {title:'عنوان المقال', excerpt:'مقتطف قصير من المقال', link:'', date:'٢٠٢٤'},
+      {title:'عنوان المقال', excerpt:'مقتطف قصير من المقال', link:'', date:'٢٠٢٤'}
+    ],
+    books:[
+      {title:'اسم الكتاب', author:'اسم الكاتب', rating:4},
+      {title:'اسم الكتاب', author:'اسم الكاتب', rating:5},
+      {title:'اسم الكتاب', author:'اسم الكاتب', rating:3}
+    ],
+    skills:[
+      {name:'اسم المهارة', level:4},
+      {name:'اسم المهارة', level:3},
+      {name:'اسم المهارة', level:5}
+    ],
+    hobbies:[
+      {name:'اسم الهواية', emoji:'📚'},
+      {name:'اسم الهواية', emoji:'🎨'},
+      {name:'اسم الهواية', emoji:'✍️'}
+    ],
+    social:[
+      {platform:'LinkedIn', emoji:'💼', url:''},
+      {platform:'GitHub', emoji:'💻', url:''},
+      {platform:'Instagram', emoji:'📷', url:''},
+      {platform:'Facebook', emoji:'👤', url:''}
+    ]
+  };
+}
+
+let currentUser = null;
+let isSignupMode = false;
+
+function openAuthPanel(){
+  document.getElementById('authOverlay').classList.add('open');
+}
+function closeAuthPanel(){
+  document.getElementById('authOverlay').classList.remove('open');
+  document.getElementById('authError').style.display='none';
+}
+
+function toggleAuthMode(){
+  isSignupMode = !isSignupMode;
+  document.getElementById('usernameField').style.display = isSignupMode ? 'block' : 'none';
+  document.getElementById('authSubmitBtn').textContent = isSignupMode ? 'إنشاء الحساب والبورتفوليو' : 'تسجيل الدخول';
+  document.getElementById('authSubtitle').textContent = isSignupMode
+    ? 'اعملي حساب جديد وابدئي بورتفوليو خاص بيكِ'
+    : 'سجّلي دخولك عشان تشوفي وتعدّلي بورتفوليوك';
+  document.getElementById('authSwitchText').innerHTML = isSignupMode
+    ? 'عندك حساب بالفعل؟ <a onclick="toggleAuthMode()">سجّلي دخولك</a>'
+    : 'لسه معملتيش حساب؟ <a onclick="toggleAuthMode()">اعملي حساب جديد</a>';
+  document.getElementById('authError').style.display='none';
+}
+
+async function handleAuthSubmit(){
+  const email=document.getElementById('authEmail').value.trim();
+  const password=document.getElementById('authPassword').value;
+  const errEl=document.getElementById('authError');
+  errEl.style.display='none';
+  if(!email || !password){ errEl.textContent='من فضلك اكتبي البريد وكلمة السر'; errEl.style.display='block'; return; }
+  let username = '';
+  if(isSignupMode){
+    username = document.getElementById('authUsername').value.trim().toLowerCase();
+    username = username.replace(/[^a-z0-9-]/g, '');
+    if(!username || username.length < 3){
+      errEl.textContent='اكتبي اسم مستخدم من 3 حروف على الأقل (حروف إنجليزي وأرقام وشرطة - بس)';
+      errEl.style.display='block';
+      return;
+    }
+  }
+  document.getElementById('authForm').style.display='none';
+  document.getElementById('authLoading').style.display='block';
+  try{
+    if(isSignupMode){
+      const { data, error } = await sb.auth.signUp({ email, password });
+      if(error) throw error;
+      currentUser = data.user;
+      await createMyPortfolio(username);
+      await loadAndRenderPortfolio();
+    }else{
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if(error) throw error;
+    }
+  }catch(err){
+    document.getElementById('authForm').style.display='block';
+    document.getElementById('authLoading').style.display='none';
+    errEl.textContent = arabicAuthError(err.message);
+    errEl.style.display='block';
+  }
+}
+function arabicAuthError(msg){
+  msg = msg || '';
+  if(msg.includes('duplicate key') || msg.includes('already exists')) return 'اسم المستخدم ده محجوز، جربي اسم تاني';
+  if(msg.includes('already registered')) return 'البريد ده مسجّل قبل كده، جربي تسجيل الدخول';
+  if(msg.includes('Invalid login credentials')) return 'البريد أو كلمة السر غلط';
+  if(msg.includes('Password should be at least')) return 'كلمة السر لازم تكون 6 أحرف على الأقل';
+  if(msg.includes('rate limit') || msg.includes('too many')) return 'محاولات كتير في وقت قصير، استنّي شوية وجربي تاني';
+  if(msg.includes('Unable to validate email')) return 'صيغة البريد الإلكتروني مش صحيحة';
+  return 'حصل خطأ: ' + msg;
+}
+function handleLogout(){
+  if(editMode) toggleEdit();
+  sb.auth.signOut();
+}
+async function handleForgotPassword(){
+  const email=document.getElementById('authEmail').value.trim();
+  const errEl=document.getElementById('authError');
+  errEl.style.display='none';
+  if(!email){ errEl.textContent='اكتبي بريدك الإلكتروني الأول فوق، وبعدين دوسي "نسيت كلمة السر"'; errEl.style.display='block'; return; }
+  try{
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
+    if(error) throw error;
+    errEl.style.color='var(--pine)';
+    errEl.textContent='بعتنالك إيميل فيه رابط لتغيير كلمة السر، افتحي بريدك (وافحصي الـ Spam)';
+    errEl.style.display='block';
+  }catch(err){
+    errEl.style.color='var(--rust)';
+    errEl.textContent=arabicAuthError(err.message);
+    errEl.style.display='block';
+  }
+}
+async function handleGoogleSignIn(){
+  const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
+  if(error){
+    const errEl=document.getElementById('authError');
+    errEl.style.color='var(--rust)';
+    errEl.textContent = arabicAuthError(error.message);
+    errEl.style.display='block';
+  }
+}
+
+let viewUsername = new URLSearchParams(window.location.search).get('u');
+let isOwnerViewing = false;
+
+sb.auth.onAuthStateChange((event, session)=>{
+  currentUser = session ? session.user : null;
+  const loggedOut = document.getElementById('loggedOutControls');
+  const loggedIn = document.getElementById('loggedInControls');
+  if(currentUser){
+    closeAuthPanel();
+    document.getElementById('authForm').style.display='block';
+    document.getElementById('authLoading').style.display='none';
+    loggedOut.style.display='none';
+    loggedIn.style.display='flex';
+    document.getElementById('userEmailBadge').textContent = currentUser.email || '';
+  }else{
+    if(editMode) toggleEdit();
+    loggedOut.style.display='inline-block';
+    loggedIn.style.display='none';
+    document.getElementById('ownerControls').style.display='none';
+  }
+  loadAndRenderPortfolio();
+});
+
+let state = null;
+let appInitialized = false;
+
+async function loadAndRenderPortfolio(){
+  const badge=document.getElementById('saveBadge');
+  const owner=document.getElementById('ownerControls');
+  const shareBox=document.getElementById('shareBox');
+  try{
+    const timeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error('استغرق الاتصال بقاعدة البيانات وقت طويل جدًا - تأكدي من النت أو من بيانات Supabase في الملف')), 10000));
+    let row = null;
+
+    if(viewUsername){
+      const { data, error } = await Promise.race([
+        sb.from('portfolios').select('*').eq('id', viewUsername).maybeSingle(),
+        timeout
+      ]);
+      if(error) throw error;
+      row = data;
+      isOwnerViewing = !!(currentUser && row && row.owner_uid === currentUser.id);
+      if(!row){
+        state = seedData();
+        if(badge) badge.textContent = 'مفيش بورتفوليو بالاسم ده';
+      }
+    }else if(currentUser){
+      const { data, error } = await Promise.race([
+        sb.from('portfolios').select('*').eq('owner_uid', currentUser.id).maybeSingle(),
+        timeout
+      ]);
+      if(error) throw error;
+      row = data;
+      isOwnerViewing = !!row;
+    }else{
+      state = seedData();
+      if(badge) badge.textContent = 'ده مثال - سجّلي دخولك لعمل بورتفوليو خاص بيكِ';
+    }
+
+    if(row){
+      state = row.data || seedData();
+      state.ownerUid = row.owner_uid;
+      state.username = row.id;
+      bumpVisitCounter(row.id, row.visits||0, isOwnerViewing);
+    }
+
+    owner.style.display = isOwnerViewing ? 'flex' : 'none';
+    document.getElementById('demoBanner').style.display = (!viewUsername && !currentUser) ? 'block' : 'none';
+    document.getElementById('createPortfolioBox').style.display = (!viewUsername && currentUser && !row) ? 'block' : 'none';
+    if(shareBox){
+      if(isOwnerViewing && state.username){
+        shareBox.style.display='flex';
+        document.getElementById('shareLink').textContent = window.location.origin + window.location.pathname + '?u=' + state.username;
+      }else{
+        shareBox.style.display='none';
+      }
+    }
+  }catch(e){
+    if(!state) state = seedData();
+    if(badge) badge.textContent='تعذّر الاتصال بالإنترنت';
+    showErr(e.message || 'فشل تحميل البيانات');
+  }
+  if(!appInitialized){
+    renderTabs();
+    document.querySelector('.section[data-section="about"]').classList.add('active');
+    appInitialized = true;
+  }
+  renderAll();
+}
+
+function bumpVisitCounter(rowId, currentCount, isOwner){
+  const el=document.getElementById('visitCounter');
+  const num=document.getElementById('visitCounterNum');
+  if(!el) return;
+  num.textContent = currentCount + (isOwner?0:1);
+  el.style.display='inline-flex';
+  if(!isOwner) sb.rpc('increment_visits', { row_id: rowId }).then(()=>{}).catch(()=>{});
+}
+
+async function createMyPortfolio(username){
+  state = seedData();
+  state.ownerUid = currentUser.id;
+  state.username = username;
+  const { error } = await sb.from('portfolios').insert({ id: username, data: state, owner_uid: currentUser.id, visits: 0 });
+  if(error) throw error;
+  viewUsername = username;
+  history.replaceState(null, '', window.location.pathname + '?u=' + username);
+}
+
+async function submitCreatePortfolio(){
+  const input = document.getElementById('newUsernameInput');
+  const errEl = document.getElementById('createPortfolioError');
+  let username = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  errEl.style.display='none';
+  if(!username || username.length < 3){
+    errEl.textContent='اكتبي اسم مستخدم من 3 حروف على الأقل (حروف إنجليزي وأرقام وشرطة - بس)';
+    errEl.style.display='block';
+    return;
+  }
+  try{
+    await createMyPortfolio(username);
+    await loadAndRenderPortfolio();
+  }catch(err){
+    errEl.textContent = arabicAuthError(err.message);
+    errEl.style.display='block';
+  }
+}
+
+let saveTimer=null;
+function saveState(){
+  const badge=document.getElementById('saveBadge');
+  clearTimeout(saveTimer);
+  badge.textContent='بيتم الحفظ...';
+  saveTimer=setTimeout(async ()=>{
+    if(!currentUser || !isOwnerViewing) return;
+    try{
+      const { error } = await sb.from('portfolios').update({ data: state }).eq('owner_uid', currentUser.id);
+      if(error) throw error;
+      badge.textContent='✓ اتحفظت أونلاين';
+    }catch(e){
+      badge.textContent='⚠️ فشل الحفظ - تأكدي إنك متصلة بالنت';
+      showErr(e.message || 'فشل الحفظ');
+    }
+  },500);
+}
+
+function getPath(obj, path){ return path.split('.').reduce((o,k)=>o&&o[k], obj); }
+function setPath(obj, path, val){
+  const parts=path.split('.');
+  let cur=obj;
+  for(let i=0;i<parts.length-1;i++) cur=cur[parts[i]];
+  cur[parts[parts.length-1]]=val;
+}
+
+function bindFields(){
+  document.querySelectorAll('[data-field]').forEach(el=>{
+    const path=el.getAttribute('data-field');
+    const val=getPath(state, path);
+    el.textContent = (val!==undefined && val!==null) ? val : '';
+    el.oninput = ()=>{
+      setPath(state, path, el.textContent);
+      saveState();
+    };
+  });
+}
+
+function renderTabs(){
+  const bar=document.getElementById('tabbar');
+  bar.innerHTML='';
+  TABS.forEach((t,i)=>{
+    const b=document.createElement('button');
+    b.className='tabbtn'+(i===0?' active':'');
+    b.innerHTML=`<span>${t.icon}</span><span>${t.label}</span>`;
+    b.style.setProperty('--tabcolor', `var(--${TAB_COLORS[i]})`);
+    b.onclick=()=>switchTab(t.id, b);
+    bar.appendChild(b);
+  });
+}
+function switchTab(id, btn){
+  document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelector(`.section[data-section="${id}"]`).classList.add('active');
+}
+
+let editMode=false;
+function toggleEdit(){
+  if(!currentUser) return;
+  editMode=!editMode;
+  document.body.classList.toggle('edit-mode', editMode);
+  document.getElementById('editToggle').classList.toggle('on', editMode);
+  document.getElementById('editToggle').textContent = editMode? '✅ إنهاء التعديل' : '✏️ تفعيل التعديل';
+  document.querySelectorAll('[data-field]').forEach(el=>{
+    el.setAttribute('contenteditable', editMode? 'true':'false');
+  });
+  renderSkills();
+  renderHobbies();
+  renderSocial();
+}
+
+const STORAGE_BUCKET = 'portfolio-files';
+
+async function uploadFile(file){
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `${PORTFOLIO_DOC_ID}/${Date.now()}-${safeName}`;
+  const { error } = await sb.storage.from(STORAGE_BUCKET).upload(path, file, { upsert: true });
+  if(error) throw new Error('فشل الرفع - ' + error.message);
+  const { data } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+function readImage(file, cb){
+  const reader=new FileReader();
+  reader.onload=()=>cb(reader.result);
+  reader.readAsDataURL(file);
+}
+function handlePhoto(ev){
+  const file=ev.target.files[0];
+  if(!file || !currentUser) return;
+  const badge=document.getElementById('saveBadge');
+  badge.textContent='بيتم رفع الصورة...';
+  uploadFile(file).then(url=>{
+    state.about.photo=url;
+    renderPhoto();
+    saveState();
+  }).catch(e=>{ badge.textContent='⚠️ '+e.message; showErr(e.message); });
+}
+function renderPhoto(){
+  const img=document.getElementById('photoImg');
+  const emoji=document.getElementById('photoEmoji');
+  if(state.about.photo){ img.src=state.about.photo; img.style.display='block'; emoji.style.display='none'; }
+  else{ img.style.display='none'; emoji.style.display='block'; }
+}
+
+function renderStatusBadge(){
+  const badge=document.getElementById('statusBadge');
+  const text=document.getElementById('statusText');
+  const s = state.about.status || 'available';
+  badge.classList.toggle('busy', s==='busy');
+  text.textContent = I18N[currentLang][s==='busy' ? 'status_busy' : 'status_available'];
+}
+function cycleStatus(){
+  if(!editMode) return;
+  state.about.status = (state.about.status==='busy') ? 'available' : 'busy';
+  renderStatusBadge();
+  saveState();
+}
+function openContact(){
+  const email = (state.about.email||'').trim();
+  if(!email || email==='بريدك الإلكتروني'){
+    alert('لسه المالكة معلّمتش بريدها الإلكتروني في قسم "الرئيسية"');
+    return;
+  }
+  const subject = encodeURIComponent('تواصل من موقعك على FolioMe');
+  window.location.href = `mailto:${email}?subject=${subject}`;
+}
+function copyShareLink(){
+  const link = document.getElementById('shareLink').textContent;
+  navigator.clipboard.writeText(link).then(()=>{
+    alert('اتنسخ الرابط ✓');
+  }).catch(()=>{
+    alert('انسخي الرابط ده يدويًا:\n' + link);
+  });
+}
+
+function esc(s){
+  return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function fieldSpan(tag, cls, arr, idx, field, extra){
+  const v = state[arr][idx][field];
+  return `<${tag} class="${cls}" data-arr="${arr}" data-idx="${idx}" data-field2="${field}" contenteditable="${editMode?'true':'false'}" ${extra||''}>${esc(v)}</${tag}>`;
+}
+
+function renderServices(){
+  const wrap=document.getElementById('servicesList');
+  wrap.innerHTML = state.services.map((it,idx)=>`
+    <div class="card">
+      <button class="delbtn" onclick="removeItem('services',${idx})">×</button>
+      <div class="ttl"><span class="ttl-icon">💼</span>${fieldSpan('span','ttl-text','services',idx,'title')}</div>
+      ${fieldSpan('div','desc','services',idx,'desc')}
+      <div class="sub" style="margin-top:10px">💰 ${fieldSpan('span','','services',idx,'price')}</div>
+      <div class="sub">⏱️ ${fieldSpan('span','','services',idx,'duration')}</div>
+    </div>`).join('');
+  bindArrFields(wrap);
+}
+
+function renderCertificates(){
+  const wrap=document.getElementById('certificatesList');
+  wrap.innerHTML = state.certificates.map((it,idx)=>`
+    <div class="card">
+      <button class="delbtn" onclick="removeItem('certificates',${idx})">×</button>
+      ${it.image?`<img class="cardimg" src="${it.image}">`:''}
+      <button class="imgbtn" onclick="pickImage('certificates',${idx})">🖼️ ${it.image?'تغيير الصورة':'إضافة صورة الشهادة'}</button>
+      <div class="ttl"><span class="ttl-icon">🎓</span>${fieldSpan('span','ttl-text','certificates',idx,'title')}</div>
+      ${fieldSpan('span','sub','certificates',idx,'org')} ·
+      ${fieldSpan('span','sub','certificates',idx,'date')}
+      ${fieldSpan('div','desc','certificates',idx,'desc')}
+      ${editMode ? `<button class="imgbtn" onclick="pickFile('certificates',${idx},'fileLink')">📎 ${it.fileLink?'تغيير ملف الشهادة':'رفع ملف الشهادة (PDF)'}</button>` : ''}
+      ${(!editMode && it.fileLink) ? `<div class="sub" style="margin-top:6px"><a href="${esc(it.fileLink)}" target="_blank" rel="noopener">📎 فتح ملف الشهادة</a></div>` : ''}
+    </div>`).join('');
+  bindArrFields(wrap);
+}
+
+function renderCourses(){
+  const wrap=document.getElementById('coursesList');
+  wrap.innerHTML = state.courses.map((it,idx)=>`
+    <div class="card">
+      <button class="delbtn" onclick="removeItem('courses',${idx})">×</button>
+      <div class="ttl"><span class="ttl-icon">📚</span>${fieldSpan('span','ttl-text','courses',idx,'title')}</div>
+      ${fieldSpan('span','sub','courses',idx,'platform')} ·
+      ${fieldSpan('span','sub','courses',idx,'date')}
+      ${fieldSpan('div','desc','courses',idx,'status')}
+    </div>`).join('');
+  bindArrFields(wrap);
+}
+
+function renderPortfolio(){
+  const wrap=document.getElementById('portfolioList');
+  wrap.innerHTML = state.portfolio.map((it,idx)=>`
+    <div class="card">
+      <button class="delbtn" onclick="removeItem('portfolio',${idx})">×</button>
+      ${it.image?`<img class="cardimg" src="${it.image}">`:''}
+      <button class="imgbtn" onclick="pickImage('portfolio',${idx})">🖼️ ${it.image?'تغيير الصورة':'إضافة صورة للمشروع'}</button>
+      <div class="ttl"><span class="ttl-icon">🎨</span>${fieldSpan('span','ttl-text','portfolio',idx,'title')}</div>
+      ${fieldSpan('div','sub','portfolio',idx,'type')}
+      ${fieldSpan('div','desc','portfolio',idx,'desc')}
+      ${editMode
+        ? `<div class="sub" style="margin-top:8px">🔗 ${fieldSpan('span','urlfield','portfolio',idx,'link')}</div>
+           <button class="imgbtn" onclick="pickFile('portfolio',${idx},'link')">📎 ${it.link?'تغيير الملف':'رفع ملف المشروع'}</button>`
+        : (it.link ? `<div class="sub" style="margin-top:8px"><a href="${esc(it.link)}" target="_blank" rel="noopener">🔗 فتح المشروع / الملف</a></div>` : '')}
+    </div>`).join('');
+  bindArrFields(wrap);
+}
+
+function renderArticles(){
+  const wrap=document.getElementById('articlesList');
+  wrap.innerHTML = state.articles.map((it,idx)=>`
+    <div class="card">
+      <button class="delbtn" onclick="removeItem('articles',${idx})">×</button>
+      <div class="ttl"><span class="ttl-icon">✍️</span>${fieldSpan('span','ttl-text','articles',idx,'title')}</div>
+      ${fieldSpan('span','sub','articles',idx,'date')}
+      ${fieldSpan('div','desc','articles',idx,'excerpt')}
+      <div class="sub" style="margin-top:8px">رابط: ${fieldSpan('span','','articles',idx,'link')}</div>
+    </div>`).join('');
+  bindArrFields(wrap);
+}
+
+function renderBooks(){
+  const wrap=document.getElementById('booksList');
+  wrap.innerHTML = state.books.map((it,idx)=>`
+    <div class="card">
+      <button class="delbtn" onclick="removeItem('books',${idx})">×</button>
+      <div class="ttl"><span class="ttl-icon">📖</span>${fieldSpan('span','ttl-text','books',idx,'title')}</div>
+      ${fieldSpan('div','sub','books',idx,'author')}
+      <div class="stars">
+        ${[1,2,3,4,5].map(n=>`<span class="star ${n<=it.rating?'on':''}" onclick="setRating(${idx},${n})">★</span>`).join('')}
+      </div>
+    </div>`).join('');
+  bindArrFields(wrap);
+}
+function setRating(idx,n){
+  if(!editMode) return;
+  state.books[idx].rating=n;
+  renderBooks();
+  saveState();
+}
+
+function renderSkills(){
+  const wrap=document.getElementById('skillsList');
+  wrap.innerHTML = state.skills.map((it,idx)=>`
+    <div class="skillrow">
+      ${fieldSpan('span','skillname','skills',idx,'name')}
+      <div class="dots">
+        ${[1,2,3,4,5].map(n=>`<span class="dot ${n<=it.level?'on':''}" onclick="setLevel(${idx},${n})"></span>`).join('')}
+      </div>
+      <button class="delbtn" style="position:static;display:${editMode?'flex':'none'}" onclick="removeItem('skills',${idx})">×</button>
+    </div>`).join('');
+  bindArrFields(wrap);
+}
+function setLevel(idx,n){
+  if(!editMode) return;
+  state.skills[idx].level=n;
+  renderSkills();
+  saveState();
+}
+
+function renderHobbies(){
+  const wrap=document.getElementById('hobbiesList');
+  wrap.innerHTML = state.hobbies.map((it,idx)=>`
+    <div class="hobby">
+      ${fieldSpan('span','','hobbies',idx,'emoji')}
+      ${fieldSpan('span','','hobbies',idx,'name')}
+      <button class="delbtn" style="position:static;display:${editMode?'flex':'none'}" onclick="removeItem('hobbies',${idx})">×</button>
+    </div>`).join('');
+  bindArrFields(wrap);
+}
+
+function renderSocial(){
+  const wrap=document.getElementById('socialList');
+  if(!wrap) return;
+  wrap.innerHTML = state.social.map((it,idx)=>{
+    const nameHtml = editMode
+      ? fieldSpan('span','','social',idx,'platform')
+      : (it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.platform)}</a>` : `<span>${esc(it.platform)}</span>`);
+    const urlHtml = editMode
+      ? `${fieldSpan('span','',  'social',idx,'url','style="font-size:10.5px;color:var(--ink-faint);max-width:120px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"')}`
+      : '';
+    return `
+    <div class="social-chip">
+      ${fieldSpan('span','emoji','social',idx,'emoji')}
+      ${nameHtml}
+      ${urlHtml}
+      <button class="delbtn" style="position:static;display:${editMode?'flex':'none'}" onclick="removeItem('social',${idx})">×</button>
+    </div>`;
+  }).join('');
+  bindArrFields(wrap);
+}
+
+function renderTimeline(){
+  const wrap=document.getElementById('timelineList');
+  wrap.innerHTML = state.timeline.map((it,idx)=>`
+    <div class="tlitem">
+      <button class="delbtn" onclick="removeItem('timeline',${idx})">×</button>
+      ${fieldSpan('div','yr','timeline',idx,'year')}
+      ${fieldSpan('div','tt','timeline',idx,'title')}
+      ${fieldSpan('div','desc','timeline',idx,'text')}
+    </div>`).join('');
+  bindArrFields(wrap);
+}
+
+function bindArrFields(root){
+  root.querySelectorAll('[data-arr]').forEach(el=>{
+    el.oninput = ()=>{
+      const arr=el.getAttribute('data-arr');
+      const idx=+el.getAttribute('data-idx');
+      const field=el.getAttribute('data-field2');
+      state[arr][idx][field]=el.textContent;
+      saveState();
+    };
+  });
+}
+
+const defaultsFor={
+  certificates:{title:'اسم الشهادة', org:'الجهة المانحة', date:'التاريخ', desc:'اكتبي وصف مختصر عن الشهادة', image:null, fileLink:''},
+  courses:{title:'اسم الدورة', platform:'المنصة', date:'التاريخ', status:'مكتملة'},
+  portfolio:{title:'اسم المشروع', type:'النوع', desc:'وصف قصير', link:'', image:null},
+  articles:{title:'عنوان المقال', excerpt:'مقتطف قصير', link:'', date:'التاريخ'},
+  books:{title:'اسم الكتاب', author:'اسم الكاتب', rating:3},
+  skills:{name:'اسم المهارة', level:3},
+  hobbies:{name:'اسم الهواية', emoji:'🙂'},
+  timeline:{year:'السنة', title:'عنوان المحطة', text:'احكي عن المحطة دي'},
+  social:{platform:'اسم المنصة', emoji:'🔗', url:''},
+  services:{title:'اسم الخدمة', desc:'وصف قصير عن الخدمة', price:'السعر', duration:'المدة'}
+};
+const renderMap={
+  certificates:renderCertificates, courses:renderCourses, portfolio:renderPortfolio,
+  articles:renderArticles, books:renderBooks, skills:renderSkills, hobbies:renderHobbies, timeline:renderTimeline,
+  social:renderSocial, services:renderServices
+};
+function addItem(key){
+  state[key].push(JSON.parse(JSON.stringify(defaultsFor[key])));
+  renderMap[key]();
+  saveState();
+}
+function removeItem(key, idx){
+  state[key].splice(idx,1);
+  renderMap[key]();
+  saveState();
+}
+function pickImage(arr, idx){
+  if(!currentUser) return;
+  const input=document.createElement('input');
+  input.type='file'; input.accept='image/*';
+  input.onchange=(ev)=>{
+    const file=ev.target.files[0];
+    if(!file) return;
+    const badge=document.getElementById('saveBadge');
+    badge.textContent='بيتم رفع الصورة...';
+    uploadToCloudinary(file).then(url=>{
+      state[arr][idx].image=url;
+      renderMap[arr]();
+      saveState();
+    }).catch(e=>{ badge.textContent='⚠️ '+e.message; showErr(e.message); });
+  };
+  input.click();
+}
+
+function pickFile(arr, idx, field){
+  if(!currentUser) return;
+  const input=document.createElement('input');
+  input.type='file'; input.accept='.pdf,image/*,.doc,.docx';
+  input.onchange=(ev)=>{
+    const file=ev.target.files[0];
+    if(!file) return;
+    const badge=document.getElementById('saveBadge');
+    badge.textContent='بيتم رفع الملف...';
+    uploadToCloudinary(file).then(url=>{
+      state[arr][idx][field]=url;
+      renderMap[arr]();
+      saveState();
+    }).catch(e=>{ badge.textContent='⚠️ '+e.message; showErr(e.message); });
+  };
+  input.click();
+}
+
+function downloadBackup(){
+  const blob=new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='my-portfolio-backup.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importBackup(ev){
+  const file=ev.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      state=JSON.parse(reader.result);
+      saveState();
+      renderAll();
+      alert('تم استيراد البيانات بنجاح');
+    }catch(e){
+      alert('الملف مش صالح، جربي ملف نسخة احتياطية صحيح');
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value='';
+}
+
+function renderAll(){
+  bindFields();
+  renderPhoto();
+  renderStatusBadge();
+  renderServices();
+  renderCertificates();
+  renderCourses();
+  renderPortfolio();
+  renderArticles();
+  renderBooks();
+  renderSkills();
+  renderHobbies();
+  renderTimeline();
+  renderSocial();
+}
+
+// التحميل بيحصل تلقائيًا من خلال sb.auth.onAuthStateChange فوق (بتطلق حدث ابتدائي بمجرد ما الصفحة تفتح)
+
+</script>
+</body>
+</html>
