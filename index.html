@@ -723,6 +723,7 @@ async function loadAndRenderPortfolio(){
   const badge=document.getElementById('saveBadge');
   const owner=document.getElementById('ownerControls');
   const shareBox=document.getElementById('shareBox');
+  state = seedData(); // قيمة افتراضية آمنة دايمًا، هتتستبدل لو لقينا بيانات حقيقية
   try{
     const timeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error('استغرق الاتصال بقاعدة البيانات وقت طويل جدًا - تأكدي من النت أو من بيانات Supabase في الملف')), 10000));
     let row = null;
